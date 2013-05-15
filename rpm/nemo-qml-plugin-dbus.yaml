@@ -18,3 +18,12 @@ PkgConfigBR:
 Files:
     - "%{_libdir}/qt4/imports/org/nemomobile/dbus/libnemodbus.so"
     - "%{_libdir}/qt4/imports/org/nemomobile/dbus/qmldir"
+
+# nemo-qml-plugins-messages was replaced by reimplementing the functionality
+# (dbus interaction) using the more generic dbus plugin, so we add the obsolete
+# here, even though the functionality doesn't directly map 1:1 to a replacement
+Provides:
+    - nemo-qml-plugins-messages > 0.3.27
+Obsoletes:
+    - nemo-qml-plugins-messages <= 0.3.27
+

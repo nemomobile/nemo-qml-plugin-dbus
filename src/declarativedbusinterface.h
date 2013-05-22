@@ -28,7 +28,13 @@
 #include <QObject>
 
 QT_BEGIN_NAMESPACE
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+class QJSValue;
+#define QScriptValue QJSValue
+#else
 class QScriptValue;
+#endif
+
 class QUrl;
 QT_END_NAMESPACE
 

@@ -26,12 +26,18 @@
 
 #include <QDBusMessage>
 #include <QDBusConnection>
-#include <QScriptEngine>
-#include <QScriptValue>
+#ifdef QT_VERSION_5
+# include <qqmlinfo.h>
+# include <QJSValue>
+# include <QJSValueIterator>
+#else
+# include <QScriptEngine>
+# include <QScriptValue>
+# include <qdeclarativeinfo.h>
+#endif
 #include <QFile>
 #include <QUrl>
 
-#include <qdeclarativeinfo.h>
 #include <QtDebug>
 
 DeclarativeDBusInterface::DeclarativeDBusInterface(QObject *parent)
@@ -87,9 +93,21 @@ void DeclarativeDBusInterface::call(const QString &method, const QScriptValue &a
     QVariantList dbusArguments;
 
     if (arguments.isArray()) {
+#ifdef QT_VERSION_5
+        QJSValueIterator it(arguments);
+        while (it.hasNext()) {
+            it.next();
+            dbusArguments.append(it.value().toVariant());
+        }
+#else
         qScriptValueToSequence(arguments, dbusArguments);
+#endif
     } else if (!arguments.isUndefined()) {
+#ifdef QT_VERSION_5
+        dbusArguments.append(arguments.toVariant());
+#else
         dbusArguments.append(qscriptvalue_cast<QVariant>(arguments));
+#endif
     }
 
     QDBusMessage message = QDBusMessage::createMethodCall(
@@ -110,12 +128,32 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
     QScriptValue type = arg.property(QLatin1String("type"));
     QScriptValue value = arg.property(QLatin1String("value"));
 
-    if (type.isValid() && value.isValid()) {
+    if (!type.isString()) {
+        qWarning() << "DeclarativeDBusInterface::typedCall - Invalid type";
+        return QVariant();
+    }
+
+#ifdef QT_VERSION_5
+    bool valueValid = !value.isNull() && !value.isUndefined();
+#else
+    bool valueValid = value.isValid();
+#endif
+
+    if (valueValid) {
         QString t = type.toString();
         if (t.length() == 1) {
-            switch (t.at(0).toAscii()) {
+            switch (t.at(0).toLatin1()) {
+#ifdef QT_VERSION_5
+                case 'y': return QVariant(static_cast<signed char>((value.toInt() & 0x7f) | (value.toInt() < 0 ? 0x80 : 0)));
+                case 'n': return QVariant(static_cast<signed char>((value.toInt() & 0x7fff) | (value.toInt() < 0 ? 0x8000 : 0)));
+                case 'q': return QVariant(static_cast<quint16>(value.toUInt()));
+                case 'i': return QVariant(value.toInt());
+                case 'h':
+                case 'u': return QVariant(value.toUInt());
+                case 'x': return QVariant(static_cast<qint64>(value.toInt()));
+                case 't': return QVariant(static_cast<quint64>(value.toUInt()));
+#else
                 case 'y': return QVariant(static_cast<signed char>((value.toInt32() & 0x7f) | (value.toInt32() < 0 ? 0x80 : 0)));
-                case 'b': return QVariant(value.toBool());
                 case 'n': return QVariant(static_cast<signed char>((value.toInt32() & 0x7fff) | (value.toInt32() < 0 ? 0x8000 : 0)));
                 case 'q': return QVariant(value.toUInt16());
                 case 'i': return QVariant(value.toInt32());
@@ -123,6 +161,8 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
                 case 'u': return QVariant(value.toUInt32());
                 case 'x': return QVariant(static_cast<qint64>(value.toInt32()));
                 case 't': return QVariant(static_cast<quint64>(value.toUInt32()));
+#endif
+                case 'b': return QVariant(value.toBool());
                 case 'd': return QVariant(static_cast<double>(value.toNumber()));
                 case 's':
                 case 'o':
@@ -145,7 +185,11 @@ void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptVal
     QVariantList dbusArguments;
 
     if (arguments.isArray()) {
+#ifdef QT_VERSION_5
+        quint32 len = arguments.property(QLatin1String("length")).toUInt();
+#else
         quint32 len = arguments.property(QLatin1String("length")).toUInt32();
+#endif
         for (quint32 i = 0; i < len; ++i) {
             QVariant value = marshallDBusArgument(arguments.property(i));
             if (!value.isValid()) {

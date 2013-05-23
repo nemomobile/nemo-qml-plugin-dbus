@@ -26,11 +26,17 @@
 #define DECLARATIVEDBUSADAPTOR_H
 
 #include <QObject>
-#include <QDeclarativeParserStatus>
+#if QT_VERSION_5
+# include <QtQml>
+# include <QQmlParserStatus>
+# define QDeclarativeParserStatus QQmlParserStatus
+#else
+# include <QDeclarativeParserStatus>
+#endif
+
 #include <QDBusVirtualObject>
 
 QT_BEGIN_NAMESPACE
-class QScriptValue;
 class QUrl;
 QT_END_NAMESPACE
 

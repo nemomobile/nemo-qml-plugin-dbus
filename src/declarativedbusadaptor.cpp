@@ -29,7 +29,11 @@
 #include <QDBusConnection>
 #include <QMetaMethod>
 
+#ifdef QT_VERSION_5
+#include <qqmlinfo.h>
+#else
 #include <qdeclarativeinfo.h>
+#endif
 #include <QtDebug>
 
 DeclarativeDBusAdaptor::DeclarativeDBusAdaptor(QObject *parent)
@@ -146,7 +150,12 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
     for (int methodIndex = meta->methodOffset(); methodIndex < meta->methodCount(); ++methodIndex) {
         const QMetaMethod method = meta->method(methodIndex);
         const QList<QByteArray> parameterTypes = method.parameterTypes();
-        if (!QByteArray(method.signature()).startsWith(message.member().toLatin1() + "(")
+#ifdef QT_VERSION_5
+        QByteArray sig(method.methodSignature());
+#else
+        QByteArray sig(method.signature());
+#endif
+        if (!sig.startsWith(message.member().toLatin1() + "(")
                 || parameterTypes.count() != dbusArguments.count()) {
             continue;
         }

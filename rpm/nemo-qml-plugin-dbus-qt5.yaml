@@ -1,0 +1,20 @@
+Name: nemo-qml-plugin-dbus-qt5
+Summary: DBus plugin for Nemo Mobile
+URL: https://github.com/nemomobile/nemo-qml-plugin-dbus
+Group: System/Libraries
+Description: "%{summary}."
+Version: 0.0.0
+Release: 1
+Sources:
+    - "%{name}-%{version}.tar.bz2"
+License: LGPLv2.1
+Configure: none
+Builder: qmake5
+PkgConfigBR:
+    - Qt5Core
+    - Qt5Qml
+    - Qt5DBus
+Files:
+    - "%{_libdir}/qt5/qml/org/nemomobile/dbus/libnemodbus.so"
+    - "%{_libdir}/qt5/qml/org/nemomobile/dbus/qmldir"
+

@@ -197,6 +197,12 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
                 arguments[argumentCount] = QGenericArgument("QVariant", &argument);
             } else if (parameterType == argument.typeName()) {
                 arguments[argumentCount] = QGenericArgument(argument.typeName(), argument.data());
+            } else if (parameterType == "QString" && argument.userType() == qMetaTypeId<QDBusObjectPath>()) {
+                // QDBusObjectPath is not exported to QML, use QString instead.
+                arguments[argumentCount] = Q_ARG(QString, argument.value<QDBusObjectPath>().path());
+            } else if (parameterType == "QString" && argument.userType() == qMetaTypeId<QDBusSignature>()) {
+                // QDBusSignature is not exported to QML, use QString instead.
+                arguments[argumentCount] = Q_ARG(QString, argument.value<QDBusSignature>().signature());
             } else {
                 // Type mismatch, there may be another overload.
                 break;

@@ -26,6 +26,8 @@
 
 #include <QDBusMessage>
 #include <QDBusConnection>
+#include <QDBusObjectPath>
+#include <QDBusSignature>
 #ifdef QT_VERSION_5
 # include <qqmlinfo.h>
 # include <QJSValue>
@@ -180,9 +182,9 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
 #endif
                 case 'b': return QVariant(value.toBool());
                 case 'd': return QVariant(static_cast<double>(value.toNumber()));
-                case 's':
-                case 'o':
-                case 'g': return QVariant(value.toString());
+                case 's': return QVariant(value.toString());
+                case 'o': return QVariant::fromValue(QDBusObjectPath(value.toString()));
+                case 'g': return QVariant::fromValue(QDBusSignature(value.toString()));
                 default: break;
             }
         }

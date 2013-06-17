@@ -172,15 +172,24 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
     for (int methodIndex = meta->methodOffset(); methodIndex < meta->methodCount(); ++methodIndex) {
         const QMetaMethod method = meta->method(methodIndex);
         const QList<QByteArray> parameterTypes = method.parameterTypes();
+
+        if (parameterTypes.count() != dbusArguments.count())
+            continue;
+
+        QString member = message.member();
+        // Support interfaces with method names starting with an uppercase letter.
+        // com.example.interface.Foo -> com.example.interface.rcFoo (remote-call Foo).
+        if (!member.isEmpty() && member.at(0).isUpper())
+            member = "rc" + member;
+
 #ifdef QT_VERSION_5
         QByteArray sig(method.methodSignature());
 #else
         QByteArray sig(method.signature());
 #endif
-        if (!sig.startsWith(message.member().toLatin1() + "(")
-                || parameterTypes.count() != dbusArguments.count()) {
+
+        if (!sig.startsWith(member.toLatin1() + "("))
             continue;
-        }
 
         int argumentCount = 0;
         for (; argumentCount < 10 && argumentCount < dbusArguments.count(); ++argumentCount) {

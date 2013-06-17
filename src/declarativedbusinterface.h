@@ -44,6 +44,10 @@ class DeclarativeDBusInterface : public QObject
     Q_PROPERTY(QString destination READ destination WRITE setDestination NOTIFY destinationChanged)
     Q_PROPERTY(QString path READ path WRITE setPath NOTIFY pathChanged)
     Q_PROPERTY(QString iface READ interface WRITE setInterface NOTIFY interfaceChanged)
+    Q_PROPERTY(BusType busType READ busType WRITE setBusType NOTIFY busTypeChanged)
+
+    Q_ENUMS(BusType)
+
 public:
     DeclarativeDBusInterface(QObject *parent = 0);
     ~DeclarativeDBusInterface();
@@ -57,6 +61,14 @@ public:
     QString interface() const;
     void setInterface(const QString &interface);
 
+    enum BusType {
+        SystemBus,
+        SessionBus
+    };
+
+    BusType busType() const;
+    void setBusType(BusType busType);
+
     Q_INVOKABLE void call(const QString &method, const QScriptValue &arguments);
     Q_INVOKABLE void typedCall(const QString &method, const QScriptValue &arguments);
 
@@ -64,11 +76,13 @@ signals:
     void destinationChanged();
     void pathChanged();
     void interfaceChanged();
+    void busTypeChanged();
 
 private:
     QString m_destination;
     QString m_path;
     QString m_interface;
+    BusType m_busType;
 };
 
 #endif

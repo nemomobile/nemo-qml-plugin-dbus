@@ -41,7 +41,7 @@
 #include <QtDebug>
 
 DeclarativeDBusInterface::DeclarativeDBusInterface(QObject *parent)
-    : QObject(parent)
+    : QObject(parent), m_busType(SessionBus)
 {
 }
 
@@ -88,6 +88,19 @@ void DeclarativeDBusInterface::setInterface(const QString &interface)
     }
 }
 
+DeclarativeDBusInterface::BusType DeclarativeDBusInterface::busType() const
+{
+    return m_busType;
+}
+
+void DeclarativeDBusInterface::setBusType(DeclarativeDBusInterface::BusType busType)
+{
+    if (m_busType != busType) {
+        m_busType = busType;
+        emit busTypeChanged();
+    }
+}
+
 void DeclarativeDBusInterface::call(const QString &method, const QScriptValue &arguments)
 {
     QVariantList dbusArguments;
@@ -116,9 +129,12 @@ void DeclarativeDBusInterface::call(const QString &method, const QScriptValue &a
                 m_interface,
                 method);
     message.setArguments(dbusArguments);
-    if (!QDBusConnection::sessionBus().send(message)) {
-        qmlInfo(this) << QDBusConnection::systemBus().lastError();
-    }
+
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    if (!conn.send(message))
+        qmlInfo(this) << conn.lastError();
 }
 
 namespace {
@@ -212,7 +228,10 @@ void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptVal
                 m_interface,
                 method);
     message.setArguments(dbusArguments);
-    if (!QDBusConnection::sessionBus().send(message)) {
-        qmlInfo(this) << QDBusConnection::systemBus().lastError();
-    }
+
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    if (!conn.send(message))
+        qmlInfo(this) << conn.lastError();
 }

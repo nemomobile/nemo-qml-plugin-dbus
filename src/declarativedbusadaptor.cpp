@@ -37,7 +37,7 @@
 #include <QtDebug>
 
 DeclarativeDBusAdaptor::DeclarativeDBusAdaptor(QObject *parent)
-    : QDBusVirtualObject(parent)
+    : QDBusVirtualObject(parent), m_busType(SessionBus)
 {
 }
 
@@ -103,19 +103,41 @@ void DeclarativeDBusAdaptor::setXml(const QString &xml)
     }
 }
 
+DeclarativeDBusAdaptor::BusType DeclarativeDBusAdaptor::busType() const
+{
+    return m_busType;
+}
+
+void DeclarativeDBusAdaptor::setBusType(DeclarativeDBusAdaptor::BusType busType)
+{
+    if (m_busType != busType) {
+        m_busType = busType;
+        emit busTypeChanged();
+    }
+}
+
 void DeclarativeDBusAdaptor::classBegin()
 {
 }
 
 void DeclarativeDBusAdaptor::componentComplete()
 {
-    QDBusConnection session = QDBusConnection::sessionBus();
-    if (!session.registerService(m_service)) {
-        qmlInfo(this) << "Failed to register service" << m_service;
-        qmlInfo(this) << QDBusConnection::sessionBus().lastError().message();
-    } else if (!session.registerVirtualObject(m_path, this)) {
-        qmlInfo(this) << "Failed to register object" << m_service;
-        qmlInfo(this) << QDBusConnection::sessionBus().lastError().message();
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    // Register service name only if it has been set.
+    if (!m_service.isEmpty()) {
+        if (!conn.registerService(m_service)) {
+            qmlInfo(this) << "Failed to register service" << m_service;
+            qmlInfo(this) << conn.lastError().message();
+        }
+    }
+
+    // It is still valid to publish an object on the bus without first registering a service name,
+    // a remote process would have to connect directly to the DBus address.
+    if (!conn.registerVirtualObject(m_path, this)) {
+        qmlInfo(this) << "Failed to register object" << m_path;
+        qmlInfo(this) << conn.lastError().message();
     }
 }
 

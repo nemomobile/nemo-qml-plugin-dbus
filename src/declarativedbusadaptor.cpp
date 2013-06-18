@@ -37,7 +37,7 @@
 #include <QtDebug>
 
 DeclarativeDBusAdaptor::DeclarativeDBusAdaptor(QObject *parent)
-    : QDBusVirtualObject(parent)
+    : QDBusVirtualObject(parent), m_busType(SessionBus)
 {
 }
 
@@ -103,19 +103,41 @@ void DeclarativeDBusAdaptor::setXml(const QString &xml)
     }
 }
 
+DeclarativeDBusAdaptor::BusType DeclarativeDBusAdaptor::busType() const
+{
+    return m_busType;
+}
+
+void DeclarativeDBusAdaptor::setBusType(DeclarativeDBusAdaptor::BusType busType)
+{
+    if (m_busType != busType) {
+        m_busType = busType;
+        emit busTypeChanged();
+    }
+}
+
 void DeclarativeDBusAdaptor::classBegin()
 {
 }
 
 void DeclarativeDBusAdaptor::componentComplete()
 {
-    QDBusConnection session = QDBusConnection::sessionBus();
-    if (!session.registerService(m_service)) {
-        qmlInfo(this) << "Failed to register service" << m_service;
-        qmlInfo(this) << QDBusConnection::sessionBus().lastError().message();
-    } else if (!session.registerVirtualObject(m_path, this)) {
-        qmlInfo(this) << "Failed to register object" << m_service;
-        qmlInfo(this) << QDBusConnection::sessionBus().lastError().message();
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    // Register service name only if it has been set.
+    if (!m_service.isEmpty()) {
+        if (!conn.registerService(m_service)) {
+            qmlInfo(this) << "Failed to register service" << m_service;
+            qmlInfo(this) << conn.lastError().message();
+        }
+    }
+
+    // It is still valid to publish an object on the bus without first registering a service name,
+    // a remote process would have to connect directly to the DBus address.
+    if (!conn.registerVirtualObject(m_path, this)) {
+        qmlInfo(this) << "Failed to register object" << m_path;
+        qmlInfo(this) << conn.lastError().message();
     }
 }
 
@@ -150,15 +172,24 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
     for (int methodIndex = meta->methodOffset(); methodIndex < meta->methodCount(); ++methodIndex) {
         const QMetaMethod method = meta->method(methodIndex);
         const QList<QByteArray> parameterTypes = method.parameterTypes();
+
+        if (parameterTypes.count() != dbusArguments.count())
+            continue;
+
+        QString member = message.member();
+        // Support interfaces with method names starting with an uppercase letter.
+        // com.example.interface.Foo -> com.example.interface.rcFoo (remote-call Foo).
+        if (!member.isEmpty() && member.at(0).isUpper())
+            member = "rc" + member;
+
 #ifdef QT_VERSION_5
         QByteArray sig(method.methodSignature());
 #else
         QByteArray sig(method.signature());
 #endif
-        if (!sig.startsWith(message.member().toLatin1() + "(")
-                || parameterTypes.count() != dbusArguments.count()) {
+
+        if (!sig.startsWith(member.toLatin1() + "("))
             continue;
-        }
 
         int argumentCount = 0;
         for (; argumentCount < 10 && argumentCount < dbusArguments.count(); ++argumentCount) {
@@ -175,6 +206,12 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
                 arguments[argumentCount] = QGenericArgument("QVariant", &argument);
             } else if (parameterType == argument.typeName()) {
                 arguments[argumentCount] = QGenericArgument(argument.typeName(), argument.data());
+            } else if (parameterType == "QString" && argument.userType() == qMetaTypeId<QDBusObjectPath>()) {
+                // QDBusObjectPath is not exported to QML, use QString instead.
+                arguments[argumentCount] = Q_ARG(QString, argument.value<QDBusObjectPath>().path());
+            } else if (parameterType == "QString" && argument.userType() == qMetaTypeId<QDBusSignature>()) {
+                // QDBusSignature is not exported to QML, use QString instead.
+                arguments[argumentCount] = Q_ARG(QString, argument.value<QDBusSignature>().signature());
             } else {
                 // Type mismatch, there may be another overload.
                 break;

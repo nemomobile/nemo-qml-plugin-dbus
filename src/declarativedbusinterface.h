@@ -26,6 +26,9 @@
 #define DECLARATIVEDBUSINTERFACE_H
 
 #include <QObject>
+#include <QMap>
+#include <QPair>
+#include <QPointer>
 
 QT_BEGIN_NAMESPACE
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
@@ -36,6 +39,7 @@ class QScriptValue;
 #endif
 
 class QUrl;
+class QDBusPendingCallWatcher;
 QT_END_NAMESPACE
 
 class DeclarativeDBusInterface : public QObject
@@ -72,17 +76,24 @@ public:
     Q_INVOKABLE void call(const QString &method, const QScriptValue &arguments);
     Q_INVOKABLE void typedCall(const QString &method, const QScriptValue &arguments);
 
+    Q_INVOKABLE void typedCallWithReturn(const QString &method, const QScriptValue &arguments,
+                                         const QScriptValue &callback);
+
 signals:
     void destinationChanged();
     void pathChanged();
     void interfaceChanged();
     void busTypeChanged();
 
+private slots:
+    void pendingCallFinished(QDBusPendingCallWatcher *watcher);
+
 private:
     QString m_destination;
     QString m_path;
     QString m_interface;
     BusType m_busType;
+    QMap<QDBusPendingCallWatcher *, QScriptValue> m_pendingCalls;
 };
 
 #endif

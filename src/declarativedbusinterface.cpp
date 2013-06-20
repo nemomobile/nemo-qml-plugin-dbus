@@ -28,8 +28,11 @@
 #include <QDBusConnection>
 #include <QDBusObjectPath>
 #include <QDBusSignature>
+#include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
 #ifdef QT_VERSION_5
 # include <qqmlinfo.h>
+# include <QJSEngine>
 # include <QJSValue>
 # include <QJSValueIterator>
 #else
@@ -40,7 +43,11 @@
 #include <QFile>
 #include <QUrl>
 
-#include <QtDebug>
+QT_BEGIN_NAMESPACE
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#define QScriptValueList QJSValueList
+#endif
+QT_END_NAMESPACE
 
 DeclarativeDBusInterface::DeclarativeDBusInterface(QObject *parent)
     : QObject(parent), m_busType(SessionBus)
@@ -49,6 +56,8 @@ DeclarativeDBusInterface::DeclarativeDBusInterface(QObject *parent)
 
 DeclarativeDBusInterface::~DeclarativeDBusInterface()
 {
+    foreach (QDBusPendingCallWatcher *watcher, m_pendingCalls.keys())
+        delete watcher;
 }
 
 QString DeclarativeDBusInterface::destination() const
@@ -196,9 +205,9 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
     return QVariant();
 }
 
-}
-
-void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptValue &arguments)
+QDBusMessage constructMessage(const QString &destination, const QString &path,
+                              const QString &interface, const QString &method,
+                              const QScriptValue &arguments)
 {
     QVariantList dbusArguments;
 
@@ -211,7 +220,7 @@ void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptVal
         for (quint32 i = 0; i < len; ++i) {
             QVariant value = marshallDBusArgument(arguments.property(i));
             if (!value.isValid()) {
-                return;
+                return QDBusMessage();
             }
             dbusArguments.append(value);
         }
@@ -219,21 +228,145 @@ void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptVal
         // arguments is a singular typed value
         QVariant value = marshallDBusArgument(arguments);
         if (!value.isValid()) {
-            return;
+            return QDBusMessage();
         }
         dbusArguments.append(value);
     }
 
-    QDBusMessage message = QDBusMessage::createMethodCall(
-                m_destination,
-                m_path,
-                m_interface,
-                method);
+    QDBusMessage message = QDBusMessage::createMethodCall(destination, path, interface, method);
     message.setArguments(dbusArguments);
+
+    return message;
+}
+
+QVariant parse(const QDBusArgument &argument)
+{
+    switch (argument.currentType()) {
+    case QDBusArgument::BasicType: {
+        QVariant v = argument.asVariant();
+        if (v.userType() == qMetaTypeId<QDBusObjectPath>())
+            return v.value<QDBusObjectPath>().path();
+        else if (v.userType() == qMetaTypeId<QDBusSignature>())
+            return v.value<QDBusSignature>().signature();
+        else
+            return v;
+    }
+    case QDBusArgument::VariantType: {
+        QVariant v = argument.asVariant().value<QDBusVariant>().variant();
+        if (v.userType() == qMetaTypeId<QDBusArgument>())
+            return parse(v.value<QDBusArgument>());
+        else
+            return v;
+    }
+    case QDBusArgument::ArrayType: {
+        QVariantList list;
+        argument.beginArray();
+        while (!argument.atEnd())
+            list.append(parse(argument));
+        argument.endArray();
+        return list;
+    }
+    case QDBusArgument::StructureType: {
+        QVariantList list;
+        argument.beginStructure();
+        while (!argument.atEnd())
+            list.append(parse(argument));
+        argument.endStructure();
+        return QVariant::fromValue(list);
+    }
+    case QDBusArgument::MapType: {
+        QVariantMap map;
+        argument.beginMap();
+        while (!argument.atEnd()) {
+            argument.beginMapEntry();
+            QVariant key = parse(argument);
+            QVariant value = parse(argument);
+            map.insert(key.toString(), value);
+            argument.endMapEntry();
+        }
+        argument.endMap();
+        return map;
+    }
+    default:
+        return QVariant();
+        break;
+    }
+}
+
+}
+
+void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptValue &arguments)
+{
+    QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
+    if (message.type() == QDBusMessage::InvalidMessage)
+        return;
 
     QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
                                                    : QDBusConnection::systemBus();
 
     if (!conn.send(message))
         qmlInfo(this) << conn.lastError();
+}
+
+void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const QScriptValue &arguments, const QScriptValue &callback)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    if (!callback.isCallable()) {
+#else
+    if (!callback.isFunction()) {
+#endif
+        qmlInfo(this) << "Callback argument is not a function";
+        return;
+    }
+
+    QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
+    if (message.type() == QDBusMessage::InvalidMessage)
+        return;
+
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    QDBusPendingCall pendingCall = conn.asyncCall(message);
+    QDBusPendingCallWatcher *watcher = new QDBusPendingCallWatcher(pendingCall);
+    connect(watcher, SIGNAL(finished(QDBusPendingCallWatcher*)),
+            this, SLOT(pendingCallFinished(QDBusPendingCallWatcher*)));
+    m_pendingCalls.insert(watcher, callback);
+}
+
+void DeclarativeDBusInterface::pendingCallFinished(QDBusPendingCallWatcher *watcher)
+{
+    QScriptValue callback = m_pendingCalls.take(watcher);
+
+    watcher->deleteLater();
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    if (!callback.isCallable())
+#else
+    if (!callback.isFunction())
+#endif
+        return;
+
+    QDBusPendingReply<> reply = *watcher;
+
+    if (reply.isError()) {
+        qmlInfo(this) << reply.error();
+        return;
+    }
+
+    QDBusMessage message = reply.reply();
+
+    QScriptValueList callbackArguments;
+
+    QVariantList arguments = message.arguments();
+    foreach (QVariant argument, arguments) {
+        if (argument.userType() == qMetaTypeId<QDBusArgument>())
+            argument = parse(argument.value<QDBusArgument>());
+        callbackArguments << callback.engine()->toScriptValue<QVariant>(argument);
+    }
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    callback.call(callbackArguments);
+#else
+    callback.call(QScriptValue(), callbackArguments);
+#endif
 }

@@ -30,27 +30,39 @@
 #include <QPair>
 #include <QPointer>
 
+#if QT_VERSION_5
+#include <QtQml/QQmlParserStatus>
+#define QDeclarativeParserStatus QQmlParserStatus
+#else
+#include <QtDeclarative/QDeclarativeParserStatus>
+#endif
+
 QT_BEGIN_NAMESPACE
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 class QJSValue;
 #define QScriptValue QJSValue
+#define QDeclarativeParserStatus QQmlParserStatus
 #else
 class QScriptValue;
 #endif
 
 class QUrl;
 class QDBusPendingCallWatcher;
+class QDBusMessage;
 QT_END_NAMESPACE
 
-class DeclarativeDBusInterface : public QObject
+class DeclarativeDBusInterface : public QObject, public QDeclarativeParserStatus
 {
     Q_OBJECT
     Q_PROPERTY(QString destination READ destination WRITE setDestination NOTIFY destinationChanged)
     Q_PROPERTY(QString path READ path WRITE setPath NOTIFY pathChanged)
     Q_PROPERTY(QString iface READ interface WRITE setInterface NOTIFY interfaceChanged)
     Q_PROPERTY(BusType busType READ busType WRITE setBusType NOTIFY busTypeChanged)
+    Q_PROPERTY(bool signalsEnabled READ signalsEnabled WRITE setSignalsEnabled NOTIFY signalsEnabledChanged)
 
     Q_ENUMS(BusType)
+
+    Q_INTERFACES(QDeclarativeParserStatus)
 
 public:
     DeclarativeDBusInterface(QObject *parent = 0);
@@ -73,27 +85,42 @@ public:
     BusType busType() const;
     void setBusType(BusType busType);
 
+    bool signalsEnabled() const;
+    void setSignalsEnabled(bool enabled);
+
     Q_INVOKABLE void call(const QString &method, const QScriptValue &arguments);
     Q_INVOKABLE void typedCall(const QString &method, const QScriptValue &arguments);
 
     Q_INVOKABLE void typedCallWithReturn(const QString &method, const QScriptValue &arguments,
                                          const QScriptValue &callback);
 
+    void classBegin();
+    void componentComplete();
+
 signals:
     void destinationChanged();
     void pathChanged();
     void interfaceChanged();
     void busTypeChanged();
+    void signalsEnabledChanged();
 
 private slots:
     void pendingCallFinished(QDBusPendingCallWatcher *watcher);
+    void signalHandler(const QDBusMessage &message);
+    void connectSignalHandlerCallback(const QString &introspectionData);
 
 private:
+    void disconnectSignalHandler();
+    void connectSignalHandler();
+
     QString m_destination;
     QString m_path;
     QString m_interface;
     BusType m_busType;
     QMap<QDBusPendingCallWatcher *, QScriptValue> m_pendingCalls;
+    QMap<QString, QMetaMethod> m_signals;
+    bool m_componentCompleted;
+    bool m_signalsEnabled;
 };
 
 #endif

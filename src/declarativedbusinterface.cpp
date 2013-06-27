@@ -157,6 +157,9 @@ void DeclarativeDBusInterface::call(const QString &method, const QScriptValue &a
         QJSValueIterator it(arguments);
         while (it.hasNext()) {
             it.next();
+            // Arrays carry the size as last value
+            if (!it.hasNext())
+                continue;
             dbusArguments.append(it.value().toVariant());
         }
 #else

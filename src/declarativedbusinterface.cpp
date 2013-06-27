@@ -24,6 +24,7 @@
 
 #include "declarativedbusinterface.h"
 
+#include <QMetaMethod>
 #include <QDBusMessage>
 #include <QDBusConnection>
 #include <QDBusObjectPath>
@@ -42,6 +43,7 @@
 #endif
 #include <QFile>
 #include <QUrl>
+#include <QXmlStreamReader>
 
 QT_BEGIN_NAMESPACE
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
@@ -50,7 +52,7 @@ QT_BEGIN_NAMESPACE
 QT_END_NAMESPACE
 
 DeclarativeDBusInterface::DeclarativeDBusInterface(QObject *parent)
-    : QObject(parent), m_busType(SessionBus)
+:   QObject(parent), m_busType(SessionBus), m_componentCompleted(false), m_signalsEnabled(false)
 {
 }
 
@@ -68,8 +70,12 @@ QString DeclarativeDBusInterface::destination() const
 void DeclarativeDBusInterface::setDestination(const QString &destination)
 {
     if (m_destination != destination) {
+        disconnectSignalHandler();
+
         m_destination = destination;
         emit destinationChanged();
+
+        connectSignalHandler();
     }
 }
 
@@ -81,8 +87,12 @@ QString DeclarativeDBusInterface::path() const
 void DeclarativeDBusInterface::setPath(const QString &path)
 {
     if (m_path != path) {
+        disconnectSignalHandler();
+
         m_path = path;
         emit pathChanged();
+
+        connectSignalHandler();
     }
 }
 
@@ -94,8 +104,12 @@ QString DeclarativeDBusInterface::interface() const
 void DeclarativeDBusInterface::setInterface(const QString &interface)
 {
     if (m_interface != interface) {
+        disconnectSignalHandler();
+
         m_interface = interface;
         emit interfaceChanged();
+
+        connectSignalHandler();
     }
 }
 
@@ -107,8 +121,30 @@ DeclarativeDBusInterface::BusType DeclarativeDBusInterface::busType() const
 void DeclarativeDBusInterface::setBusType(DeclarativeDBusInterface::BusType busType)
 {
     if (m_busType != busType) {
+        disconnectSignalHandler();
+
         m_busType = busType;
         emit busTypeChanged();
+
+        connectSignalHandler();
+    }
+}
+
+bool DeclarativeDBusInterface::signalsEnabled() const
+{
+    return m_signalsEnabled;
+}
+
+void DeclarativeDBusInterface::setSignalsEnabled(bool enabled)
+{
+    if (m_signalsEnabled != enabled) {
+        if (!enabled)
+            disconnectSignalHandler();
+
+        m_signalsEnabled = enabled;
+        emit signalsEnabledChanged();
+
+        connectSignalHandler();
     }
 }
 
@@ -333,6 +369,16 @@ void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const 
     m_pendingCalls.insert(watcher, callback);
 }
 
+void DeclarativeDBusInterface::classBegin()
+{
+}
+
+void DeclarativeDBusInterface::componentComplete()
+{
+    m_componentCompleted = true;
+    connectSignalHandler();
+}
+
 void DeclarativeDBusInterface::pendingCallFinished(QDBusPendingCallWatcher *watcher)
 {
     QScriptValue callback = m_pendingCalls.take(watcher);
@@ -369,4 +415,123 @@ void DeclarativeDBusInterface::pendingCallFinished(QDBusPendingCallWatcher *watc
 #else
     callback.call(QScriptValue(), callbackArguments);
 #endif
+}
+
+void DeclarativeDBusInterface::signalHandler(const QDBusMessage &message)
+{
+    QVariantList arguments = message.arguments();
+
+    QGenericArgument args[10];
+
+    for (int i = 0; i < qMin(arguments.length(), 10); ++i) {
+        const QVariant &arg = arguments.at(i);
+        args[i] = QGenericArgument(arg.typeName(), arg.data());
+    }
+
+    QMetaMethod method = m_signals.value(message.member());
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    if (!method.isValid())
+        return;
+#else
+    if (!method.enclosingMetaObject())
+        return;
+#endif
+
+    method.invoke(this, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7],
+                  args[8], args[9]);
+}
+
+void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &introspectionData)
+{
+    QStringList dbusSignals;
+
+    QXmlStreamReader xml(introspectionData);
+    while (!xml.atEnd()) {
+        if (!xml.readNextStartElement())
+            continue;
+
+        if (xml.name() == QLatin1String("node"))
+            continue;
+
+        if (xml.name() != QLatin1String("interface") ||
+            xml.attributes().value(QLatin1String("name")) != m_interface) {
+            xml.skipCurrentElement();
+            continue;
+        }
+
+        while (!xml.atEnd()) {
+            if (!xml.readNextStartElement())
+                break;
+
+            if (xml.name() == QLatin1String("signal"))
+                dbusSignals.append(xml.attributes().value(QLatin1String("name")).toString());
+            else
+                xml.skipCurrentElement();
+        }
+    }
+
+    if (dbusSignals.isEmpty())
+        return;
+
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    for (int i = 0; i < metaObject()->methodCount(); ++i) {
+        QMetaMethod method = metaObject()->method(i);
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+        QString methodName = method.name();
+#else
+        QString methodName = QString::fromLatin1(method.signature());
+        methodName.truncate(methodName.indexOf(QLatin1Char('(')));
+#endif
+
+        if (!dbusSignals.contains(methodName))
+            continue;
+
+        dbusSignals.removeOne(methodName);
+
+        m_signals.insert(methodName, method);
+        conn.connect(m_destination, m_path, m_interface, methodName,
+                     this, SLOT(signalHandler(QDBusMessage)));
+
+        if (dbusSignals.isEmpty())
+            break;
+    }
+}
+
+void DeclarativeDBusInterface::disconnectSignalHandler()
+{
+    if (m_signals.isEmpty())
+        return;
+
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    foreach (const QString &signal, m_signals.keys()) {
+        conn.disconnect(m_destination, m_path, m_interface, signal,
+                        this, SLOT(signalHandler(QDBusMessage)));
+    }
+
+    m_signals.clear();
+}
+
+void DeclarativeDBusInterface::connectSignalHandler()
+{
+    if (!m_componentCompleted || !m_signalsEnabled)
+        return;
+
+    QDBusMessage message =
+        QDBusMessage::createMethodCall(m_destination, m_path,
+                                       QLatin1String("org.freedesktop.DBus.Introspectable"),
+                                       QLatin1String("Introspect"));
+
+    if (message.type() == QDBusMessage::InvalidMessage)
+        return;
+
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    if (!conn.callWithCallback(message, this, SLOT(connectSignalHandlerCallback(QString))))
+        qmlInfo(this) << "Failed to introspect interface" << conn.lastError();
 }

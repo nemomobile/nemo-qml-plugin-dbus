@@ -372,6 +372,35 @@ void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const 
     m_pendingCalls.insert(watcher, callback);
 }
 
+QVariant DeclarativeDBusInterface::getProperty(const QString &name)
+{
+    QDBusMessage message =
+        QDBusMessage::createMethodCall(m_destination, m_path,
+                                       QLatin1String("org.freedesktop.DBus.Properties"),
+                                       QLatin1String("Get"));
+
+    QVariantList args;
+    args.append(m_interface);
+    args.append(name);
+
+    message.setArguments(args);
+
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    QDBusMessage reply = conn.call(message);
+    if (reply.type() == QDBusMessage::ErrorMessage)
+        return QVariant();
+    if (reply.arguments().isEmpty())
+        return QVariant();
+
+    QVariant v = reply.arguments().first();
+    if (v.userType() == qMetaTypeId<QDBusVariant>())
+        return v.value<QDBusVariant>().variant();
+    else
+        return v;
+}
+
 void DeclarativeDBusInterface::classBegin()
 {
 }

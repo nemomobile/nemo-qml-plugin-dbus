@@ -244,3 +244,15 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
     qmlInfo(this) << "No method with the signature " << signature;
     return false;
 }
+
+
+void DeclarativeDBusAdaptor::emitSignal(const QString &name)
+{
+    QDBusMessage signal = QDBusMessage::createSignal(m_path, m_interface, name);
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    if (!conn.send(signal))
+        qmlInfo(this) << conn.lastError();
+}
+

@@ -82,6 +82,8 @@ public:
     QString introspect(const QString &path) const;
     bool handleMessage(const QDBusMessage &message, const QDBusConnection &connection);
 
+    Q_INVOKABLE void emitSignal(const QString &name);
+
 signals:
     void serviceChanged();
     void pathChanged();

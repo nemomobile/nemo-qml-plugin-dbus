@@ -29,6 +29,7 @@
 #include <QMap>
 #include <QPair>
 #include <QPointer>
+#include <QVariant>
 
 #if QT_VERSION_5
 #include <QtQml/QQmlParserStatus>
@@ -93,6 +94,8 @@ public:
 
     Q_INVOKABLE void typedCallWithReturn(const QString &method, const QScriptValue &arguments,
                                          const QScriptValue &callback);
+
+    Q_INVOKABLE QVariant getProperty(const QString &name);
 
     void classBegin();
     void componentComplete();

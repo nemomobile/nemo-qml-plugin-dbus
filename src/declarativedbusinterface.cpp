@@ -497,8 +497,8 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
 
             if (xml.name() == QLatin1String("signal"))
                 dbusSignals.append(xml.attributes().value(QLatin1String("name")).toString());
-            else
-                xml.skipCurrentElement();
+
+            xml.skipCurrentElement();
         }
     }
 

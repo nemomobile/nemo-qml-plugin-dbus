@@ -235,6 +235,21 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
                 case 'g': return QVariant::fromValue(QDBusSignature(value.toString()));
                 default: break;
             }
+        } else if (t == QLatin1String("as")) {
+            QVariant variantVal = value.toVariant();
+            QStringList strArray;
+            if (variantVal.type() == QVariant::List) {
+                QVariantList vlist = variantVal.toList();
+                foreach (const QVariant &listVal, vlist) {
+                    strArray.append(listVal.toString());
+                }
+            } else if (variantVal.type() == QVariant::String) {
+                strArray.append(variantVal.toString());
+            } else {
+                qWarning() << "DeclarativeDBusInterface::typedCall - Invalid string array argument";
+            }
+
+            return QVariant::fromValue<QStringList>(strArray);
         }
         qWarning() << "DeclarativeDBusInterface::typedCall - Invalid type specifier:" << t;
     } else {
@@ -334,6 +349,9 @@ QVariant parse(const QDBusArgument &argument)
 
 }
 
+// Can be used to specify the parameter types to the method call.
+// Example: to call a method taking an array of string {as} parameter:
+// typedCall("someMethod", [{"type":"as", "value":["first", "second"]}])
 void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptValue &arguments)
 {
     QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);

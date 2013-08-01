@@ -177,6 +177,11 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
             continue;
 
         QString member = message.member();
+        // Don't try to handle introspect call. It will be handled
+        // internally for QDBusVirtualObject derived classes.
+        if (member == QLatin1String("Introspect")) {
+            return false;
+        }
         // Support interfaces with method names starting with an uppercase letter.
         // com.example.interface.Foo -> com.example.interface.rcFoo (remote-call Foo).
         if (!member.isEmpty() && member.at(0).isUpper())

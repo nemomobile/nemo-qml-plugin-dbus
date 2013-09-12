@@ -189,6 +189,16 @@ void DeclarativeDBusInterface::call(const QString &method, const QScriptValue &a
 
 namespace {
 
+template<typename T>
+T extractTypedList(const QVariantList &list)
+{
+    T rv;
+    foreach (const QVariant &element, list) {
+        rv.append(element.value<typename T::value_type>());
+    }
+    return rv;
+}
+
 QVariant marshallDBusArgument(const QScriptValue &arg)
 {
     QScriptValue type = arg.property(QLatin1String("type"));
@@ -211,7 +221,7 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
             switch (t.at(0).toLatin1()) {
 #ifdef QT_VERSION_5
                 case 'y': return QVariant(static_cast<signed char>((value.toInt() & 0x7f) | (value.toInt() < 0 ? 0x80 : 0)));
-                case 'n': return QVariant(static_cast<signed char>((value.toInt() & 0x7fff) | (value.toInt() < 0 ? 0x8000 : 0)));
+                case 'n': return QVariant(static_cast<qint16>((value.toInt() & 0x7fff) | (value.toInt() < 0 ? 0x8000 : 0)));
                 case 'q': return QVariant(static_cast<quint16>(value.toUInt()));
                 case 'i': return QVariant(value.toInt());
                 case 'h':
@@ -220,7 +230,7 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
                 case 't': return QVariant(static_cast<quint64>(value.toUInt()));
 #else
                 case 'y': return QVariant(static_cast<signed char>((value.toInt32() & 0x7f) | (value.toInt32() < 0 ? 0x80 : 0)));
-                case 'n': return QVariant(static_cast<signed char>((value.toInt32() & 0x7fff) | (value.toInt32() < 0 ? 0x8000 : 0)));
+                case 'n': return QVariant(static_cast<qint16>((value.toInt32() & 0x7fff) | (value.toInt32() < 0 ? 0x8000 : 0)));
                 case 'q': return QVariant(value.toUInt16());
                 case 'i': return QVariant(value.toInt32());
                 case 'h':
@@ -234,6 +244,17 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
                 case 'o': return QVariant::fromValue(QDBusObjectPath(value.toString()));
                 case 'g': return QVariant::fromValue(QDBusSignature(value.toString()));
                 default: break;
+            }
+        } else if (t.length() == 2 && (t.at(0).toLatin1() == 'a')) {
+            // The result must be an array of typed data
+            if (!value.isArray()) {
+                qWarning() << "Invalid value for type specifier:" << t << "v:" << value.toVariant();
+            }  else {
+                const QVariantList list = value.toVariant().toList();
+                switch (t.at(1).toLatin1()) {
+                    case 's': return QVariant(extractTypedList<QStringList>(list));
+                    default: break;
+                }
             }
         }
         qWarning() << "DeclarativeDBusInterface::typedCall - Invalid type specifier:" << t;

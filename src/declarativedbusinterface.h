@@ -39,6 +39,7 @@
 #endif
 
 QT_BEGIN_NAMESPACE
+class QDBusArgument;
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 class QJSValue;
 #define QScriptValue QJSValue
@@ -99,6 +100,9 @@ public:
 
     void classBegin();
     void componentComplete();
+
+    static QVariant parse(const QDBusArgument &argument);
+    static QVariantList argumentsFromScriptValue(const QScriptValue &arguments);
 
 signals:
     void destinationChanged();

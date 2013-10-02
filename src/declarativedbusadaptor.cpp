@@ -36,6 +36,8 @@
 #endif
 #include <QtDebug>
 
+#include "declarativedbusinterface.h"
+
 DeclarativeDBusAdaptor::DeclarativeDBusAdaptor(QObject *parent)
     : QDBusVirtualObject(parent), m_busType(SessionBus)
 {
@@ -146,22 +148,23 @@ QString DeclarativeDBusAdaptor::introspect(const QString &) const
     return m_xml;
 }
 
-static QVariant parse(const QDBusArgument &argument)
+QDBusArgument &operator << (QDBusArgument &argument, const QVariant &value)
 {
-    if (argument.currentType() == QDBusArgument::ArrayType) {
-        QVariantList list;
-        argument >> list;
-        return list;
-    } else if (argument.currentType() == QDBusArgument::MapType) {
-        QVariantMap map;
-        argument >> map;
-        return map;
-    } else {
-        return QVariant();
+    switch (value.type()) {
+    case QVariant::String:      return argument << value.toString();
+    case QVariant::StringList:  return argument << value.toStringList();
+    case QVariant::Int:         return argument << value.toInt();
+    case QVariant::Bool:        return argument << value.toBool();
+    case QVariant::Double:      return argument << value.toDouble();
+    default:
+        if (value.userType() == qMetaTypeId<float>()) {
+            return argument << value.value<float>();
+        }
+        return argument;
     }
 }
 
-bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QDBusConnection &)
+bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QDBusConnection &connection)
 {
     QVariant variants[10];
     QGenericArgument arguments[10];
@@ -169,23 +172,115 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
     const QMetaObject * const meta = metaObject();
     const QVariantList dbusArguments = message.arguments();
 
+    QString member = message.member();
+    QString interface = message.interface();
+
+    // Don't try to handle introspect call. It will be handled
+    // internally for QDBusVirtualObject derived classes.
+    if (interface == QLatin1String("org.freedesktop.DBus.Introspectable")) {
+        return false;
+    } else if (interface == QLatin1String("org.freedesktop.DBus.Properties")) {
+        if (member == QLatin1String("Get")) {
+            interface = dbusArguments.value(0).toString();
+            member = dbusArguments.value(1).toString();
+
+            const QMetaObject * const meta = metaObject();
+            if (!member.isEmpty() && member.at(0).isUpper())
+                member = "rc" + member;
+
+            for (int propertyIndex = meta->propertyOffset();
+                        propertyIndex < meta->propertyCount();
+                        ++propertyIndex) {
+                QMetaProperty property = meta->property(propertyIndex);
+
+                if (QLatin1String(property.name()) != member)
+                    continue;
+
+                QVariant value = property.read(this);
+                if (value.type() == QVariant::List) {
+                    QVariantList variantList = value.toList();
+                    if (variantList.count() > 0) {
+
+                        QDBusArgument list;
+                        list.beginArray(variantList.first().userType());
+                        foreach (const QVariant &listValue, variantList) {
+                            list << listValue;
+                        }
+                        list.endArray();
+                        value = QVariant::fromValue(list);
+                    }
+                }
+
+                QDBusMessage reply = message.createReply(QVariantList() << value);
+                connection.call(reply, QDBus::NoBlock);
+
+                return true;
+            }
+        } else if (member == QLatin1String("GetAll")) {
+            interface = dbusArguments.value(0).toString();
+
+            QDBusArgument map;
+            map.beginMap();
+
+            for (int propertyIndex = meta->propertyOffset();
+                        propertyIndex < meta->propertyCount();
+                        ++propertyIndex) {
+                QMetaProperty property = meta->property(propertyIndex);
+
+                QString propertyName = QLatin1String(property.name());
+                if (propertyName.startsWith(QLatin1String("rc")))
+                    propertyName = propertyName.mid(2);
+
+                const QVariant value = property.read(this);
+
+                map.beginMapEntry();
+                map << propertyName;
+                map << value;
+                map.endMapEntry();
+            }
+            map.endMap();
+
+            QDBusMessage reply = message.createReply(QVariantList() << QVariant::fromValue(map));
+            connection.call(reply, QDBus::NoBlock);
+
+            return true;
+        } else if (member == QLatin1String("Set")) {
+            interface = dbusArguments.value(0).toString();
+            member = dbusArguments.value(1).toString();
+            QVariant value = dbusArguments.value(3);
+
+            const QMetaObject * const meta = metaObject();
+            if (!member.isEmpty() && member.at(0).isUpper())
+                member = "rc" + member;
+
+            for (int propertyIndex = meta->propertyOffset();
+                        propertyIndex < meta->propertyCount();
+                        ++propertyIndex) {
+                QMetaProperty property = meta->property(propertyIndex);
+
+                if (QLatin1String(property.name()) != member)
+                    continue;
+
+                if (value.userType() == qMetaTypeId<QDBusArgument>())
+                    value = DeclarativeDBusInterface::parse(value.value<QDBusArgument>());
+
+                return property.write(this, value);
+            }
+        }
+        return false;
+    }
+
+    // Support interfaces with method names starting with an uppercase letter.
+    // com.example.interface.Foo -> com.example.interface.rcFoo (remote-call Foo).
+    if (!member.isEmpty() && member.at(0).isUpper())
+        member = "rc" + member;
+
     for (int methodIndex = meta->methodOffset(); methodIndex < meta->methodCount(); ++methodIndex) {
         const QMetaMethod method = meta->method(methodIndex);
         const QList<QByteArray> parameterTypes = method.parameterTypes();
 
         if (parameterTypes.count() != dbusArguments.count())
             continue;
-
-        QString member = message.member();
-        // Don't try to handle introspect call. It will be handled
-        // internally for QDBusVirtualObject derived classes.
-        if (member == QLatin1String("Introspect")) {
-            return false;
-        }
-        // Support interfaces with method names starting with an uppercase letter.
-        // com.example.interface.Foo -> com.example.interface.rcFoo (remote-call Foo).
-        if (!member.isEmpty() && member.at(0).isUpper())
-            member = "rc" + member;
 
 #ifdef QT_VERSION_5
         QByteArray sig(method.methodSignature());
@@ -203,7 +298,7 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
 
             // If the variant type is a QBusArgument attempt to parse its contents.
             if (argument.userType() == qMetaTypeId<QDBusArgument>()) {
-                argument = parse(argument.value<QDBusArgument>());
+                argument = DeclarativeDBusInterface::parse(argument.value<QDBusArgument>());
             }
 
             const QByteArray parameterType = parameterTypes.at(argumentCount);
@@ -250,10 +345,21 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
     return false;
 }
 
-
 void DeclarativeDBusAdaptor::emitSignal(const QString &name)
 {
     QDBusMessage signal = QDBusMessage::createSignal(m_path, m_interface, name);
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    if (!conn.send(signal))
+        qmlInfo(this) << conn.lastError();
+}
+
+void DeclarativeDBusAdaptor::emitSignalWithArguments(
+        const QString &name, const QScriptValue &arguments)
+{
+    QDBusMessage signal = QDBusMessage::createSignal(m_path, m_interface, name);
+    signal.setArguments(DeclarativeDBusInterface::argumentsFromScriptValue(arguments));
     QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
                                                    : QDBusConnection::systemBus();
 

@@ -148,7 +148,7 @@ void DeclarativeDBusInterface::setSignalsEnabled(bool enabled)
     }
 }
 
-void DeclarativeDBusInterface::call(const QString &method, const QScriptValue &arguments)
+QVariantList DeclarativeDBusInterface::argumentsFromScriptValue(const QScriptValue &arguments)
 {
     QVariantList dbusArguments;
 
@@ -172,6 +172,13 @@ void DeclarativeDBusInterface::call(const QString &method, const QScriptValue &a
         dbusArguments.append(qscriptvalue_cast<QVariant>(arguments));
 #endif
     }
+
+    return dbusArguments;
+}
+
+void DeclarativeDBusInterface::call(const QString &method, const QScriptValue &arguments)
+{
+    QVariantList dbusArguments = argumentsFromScriptValue(arguments);
 
     QDBusMessage message = QDBusMessage::createMethodCall(
                 m_destination,
@@ -228,6 +235,7 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
                 case 'u': return QVariant(value.toUInt());
                 case 'x': return QVariant(static_cast<qint64>(value.toInt()));
                 case 't': return QVariant(static_cast<quint64>(value.toUInt()));
+                case 'v': return value.toVariant();
 #else
                 case 'y': return QVariant(static_cast<signed char>((value.toInt32() & 0x7f) | (value.toInt32() < 0 ? 0x80 : 0)));
                 case 'n': return QVariant(static_cast<qint16>((value.toInt32() & 0x7fff) | (value.toInt32() < 0 ? 0x8000 : 0)));
@@ -237,6 +245,7 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
                 case 'u': return QVariant(value.toUInt32());
                 case 'x': return QVariant(static_cast<qint64>(value.toInt32()));
                 case 't': return QVariant(static_cast<quint64>(value.toUInt32()));
+                case 'v': return qscriptvalue_cast<QVariant>(value);
 #endif
                 case 'b': return QVariant(value.toBool());
                 case 'd': return QVariant(static_cast<double>(value.toNumber()));
@@ -299,7 +308,9 @@ QDBusMessage constructMessage(const QString &destination, const QString &path,
     return message;
 }
 
-QVariant parse(const QDBusArgument &argument)
+}
+
+QVariant DeclarativeDBusInterface::parse(const QDBusArgument &argument)
 {
     switch (argument.currentType()) {
     case QDBusArgument::BasicType: {
@@ -351,8 +362,6 @@ QVariant parse(const QDBusArgument &argument)
         return QVariant();
         break;
     }
-}
-
 }
 
 void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptValue &arguments)
@@ -460,6 +469,8 @@ void DeclarativeDBusInterface::pendingCallFinished(QDBusPendingCallWatcher *watc
     foreach (QVariant argument, arguments) {
         if (argument.userType() == qMetaTypeId<QDBusArgument>())
             argument = parse(argument.value<QDBusArgument>());
+        else if (argument.userType() == qMetaTypeId<QDBusObjectPath>())
+            argument = argument.value<QDBusObjectPath>().path();
         callbackArguments << callback.engine()->toScriptValue<QVariant>(argument);
     }
 

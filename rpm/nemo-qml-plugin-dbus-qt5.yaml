@@ -17,4 +17,14 @@ PkgConfigBR:
 Files:
     - "%{_libdir}/qt5/qml/org/nemomobile/dbus/libnemodbus.so"
     - "%{_libdir}/qt5/qml/org/nemomobile/dbus/qmldir"
-
+SubPackages:
+    - Name: tests
+      Summary: DBus plugin tests
+      Group: System/Libraries
+      Description: "%{summary}."
+      Requires:
+        - qt5-qtdeclarative-import-qttest
+        - qt5-qtdeclarative-devel-tools
+      Files:
+        - "/opt/tests/nemo-qml-plugins/dbus-qt5/*"
+        -

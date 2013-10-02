@@ -38,6 +38,13 @@
 
 QT_BEGIN_NAMESPACE
 class QUrl;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+class QJSValue;
+#define QScriptValue QJSValue
+#define QDeclarativeParserStatus QQmlParserStatus
+#else
+class QScriptValue;
+#endif
 QT_END_NAMESPACE
 
 class DeclarativeDBusAdaptor : public QDBusVirtualObject, public QDeclarativeParserStatus
@@ -83,6 +90,7 @@ public:
     bool handleMessage(const QDBusMessage &message, const QDBusConnection &connection);
 
     Q_INVOKABLE void emitSignal(const QString &name);
+    Q_INVOKABLE void emitSignalWithArguments(const QString &name, const QScriptValue &arguments);
 
 signals:
     void serviceChanged();

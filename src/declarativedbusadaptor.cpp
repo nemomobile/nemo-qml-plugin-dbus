@@ -319,8 +319,22 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
         }
 
         if (argumentCount == dbusArguments.length()) {
-            QVariant retVal;
-            bool success = method.invoke(
+            if (method.methodType() == QMetaMethod::Signal) {
+                return method.invoke(
+                            this,
+                            arguments[0],
+                            arguments[1],
+                            arguments[2],
+                            arguments[3],
+                            arguments[4],
+                            arguments[5],
+                            arguments[6],
+                            arguments[7],
+                            arguments[8],
+                            arguments[9]);
+            } else {
+                QVariant retVal;
+                bool success = method.invoke(
                             this,
                             Q_RETURN_ARG(QVariant, retVal),
                             arguments[0],
@@ -333,13 +347,14 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
                             arguments[7],
                             arguments[8],
                             arguments[9]);
-            if (retVal.isValid()) {
-                QDBusMessage reply = message.createReply(retVal);
-                QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
-                                                               : QDBusConnection::systemBus();
-                conn.send(reply);
+                if (retVal.isValid()) {
+                    QDBusMessage reply = message.createReply(retVal);
+                    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                                   : QDBusConnection::systemBus();
+                    conn.send(reply);
+                }
+                return success;
             }
-            return success;
         }
     }
     QByteArray signature = message.member().toLatin1() + "(";

@@ -54,6 +54,8 @@ Item {
         property variant variantValue
         property var stringListValue
         property string rcStringValue: "Capital"
+        property int unsignedValue: 4
+        property string typeinfo_unsignedValue: 'u'
 
         signal noArgs()
         signal doubleArg(double argument)
@@ -194,11 +196,32 @@ Item {
             compare(dbusAdaptor.variantValue, object)
         }
 
+        function test_typedObject() {
+            var object = {
+                'type': 'm',
+                'value': {
+                    'prop1': { 'type': 'u', 'value': 5 },
+                    'prop2': { 'type': 's', 'value': "eight" }
+                }
+            }
+            dbusInterface.typedCall("variantArg", object)
+            tryCompare(dbusAdaptor, "lastFunction", "variantArg")
+            object = {
+                'prop1': 5,
+                'prop2': "eight"
+            }
+            compare(dbusAdaptor.variantValue, object)
+        }
+
         function test_upperCase() {
             dbusInterface.call("NoArgs", undefined)
             tryCompare(dbusAdaptor, "lastFunction", "rcNoArgs")
 
             compare(dbusInterface.getProperty("StringValue"), "Capital")
+        }
+
+        function test_unsigned() {
+            compare(dbusInterface.getProperty("unsignedValue"), 4)
         }
     }
 }

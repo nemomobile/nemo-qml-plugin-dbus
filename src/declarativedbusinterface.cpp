@@ -39,6 +39,7 @@
 #else
 # include <QScriptEngine>
 # include <QScriptValue>
+# include <QScriptValueIterator>
 # include <qdeclarativeinfo.h>
 #endif
 #include <QFile>
@@ -206,7 +207,23 @@ T extractTypedList(const QVariantList &list)
     return rv;
 }
 
-QVariant marshallDBusArgument(const QScriptValue &arg)
+QVariant extractMap(const QScriptValue &value)
+{
+    QVariantMap map;
+#ifdef QT_VERSION_5
+    QJSValueIterator iterator(value);
+#else
+    QScriptValueIterator iterator(value);
+#endif
+    while (iterator.next()) {
+        map.insert(iterator.name(), DeclarativeDBusInterface::marshallDBusArgument(iterator.value()));
+    }
+    return map;
+}
+
+}
+
+QVariant DeclarativeDBusInterface::marshallDBusArgument(const QScriptValue &arg)
 {
     QScriptValue type = arg.property(QLatin1String("type"));
     QScriptValue value = arg.property(QLatin1String("value"));
@@ -252,6 +269,7 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
                 case 's': return QVariant(value.toString());
                 case 'o': return QVariant::fromValue(QDBusObjectPath(value.toString()));
                 case 'g': return QVariant::fromValue(QDBusSignature(value.toString()));
+                case 'm': return extractMap(value);
                 default: break;
             }
         } else if (t.length() == 2 && (t.at(0).toLatin1() == 'a')) {
@@ -274,9 +292,7 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
     return QVariant();
 }
 
-QDBusMessage constructMessage(const QString &destination, const QString &path,
-                              const QString &interface, const QString &method,
-                              const QScriptValue &arguments)
+QVariantList DeclarativeDBusInterface::marshallDBusArguments(const QScriptValue &arguments, bool *ok)
 {
     QVariantList dbusArguments;
 
@@ -287,27 +303,21 @@ QDBusMessage constructMessage(const QString &destination, const QString &path,
         quint32 len = arguments.property(QLatin1String("length")).toUInt32();
 #endif
         for (quint32 i = 0; i < len; ++i) {
-            QVariant value = marshallDBusArgument(arguments.property(i));
-            if (!value.isValid()) {
-                return QDBusMessage();
+            QVariant value = DeclarativeDBusInterface::marshallDBusArgument(arguments.property(i));
+            if (!value.isValid() && ok) {
+                *ok = false;
             }
             dbusArguments.append(value);
         }
     } else if (!arguments.isUndefined()) {
         // arguments is a singular typed value
-        QVariant value = marshallDBusArgument(arguments);
-        if (!value.isValid()) {
-            return QDBusMessage();
+        QVariant value = DeclarativeDBusInterface::marshallDBusArgument(arguments);
+        if (!value.isValid() && ok) {
+            *ok = false;
         }
         dbusArguments.append(value);
     }
-
-    QDBusMessage message = QDBusMessage::createMethodCall(destination, path, interface, method);
-    message.setArguments(dbusArguments);
-
-    return message;
-}
-
+    return dbusArguments;
 }
 
 QVariant DeclarativeDBusInterface::parse(const QDBusArgument &argument)
@@ -366,8 +376,11 @@ QVariant DeclarativeDBusInterface::parse(const QDBusArgument &argument)
 
 void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptValue &arguments)
 {
-    QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
-    if (message.type() == QDBusMessage::InvalidMessage)
+    bool ok = true;
+    QDBusMessage message = QDBusMessage::createMethodCall(m_destination, m_path, m_interface, method);
+    message.setArguments(marshallDBusArguments(arguments, &ok));
+
+    if (!ok)
         return;
 
     QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
@@ -388,8 +401,11 @@ void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const 
         return;
     }
 
-    QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
-    if (message.type() == QDBusMessage::InvalidMessage)
+    bool ok = true;
+    QDBusMessage message = QDBusMessage::createMethodCall(m_destination, m_path, m_interface, method);
+    message.setArguments(marshallDBusArguments(arguments, &ok));
+
+    if (!ok)
         return;
 
     QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()

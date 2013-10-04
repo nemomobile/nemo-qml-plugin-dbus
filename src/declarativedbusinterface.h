@@ -103,6 +103,8 @@ public:
 
     static QVariant parse(const QDBusArgument &argument);
     static QVariantList argumentsFromScriptValue(const QScriptValue &arguments);
+    static QVariant marshallDBusArgument(const QScriptValue &arg);
+    static QVariantList marshallDBusArguments(const QScriptValue &arguments, bool *success = 0);
 
 signals:
     void destinationChanged();

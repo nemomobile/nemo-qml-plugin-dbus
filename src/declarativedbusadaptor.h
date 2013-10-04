@@ -91,6 +91,7 @@ public:
 
     Q_INVOKABLE void emitSignal(const QString &name);
     Q_INVOKABLE void emitSignalWithArguments(const QString &name, const QScriptValue &arguments);
+    Q_INVOKABLE void emitSignalWithTypedArguments(const QString &name, const QScriptValue &arguments);
 
 signals:
     void serviceChanged();

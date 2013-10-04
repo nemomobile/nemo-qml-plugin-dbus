@@ -148,20 +148,77 @@ QString DeclarativeDBusAdaptor::introspect(const QString &) const
     return m_xml;
 }
 
-QDBusArgument &operator << (QDBusArgument &argument, const QVariant &value)
+template <typename T> QVariant castList(const QVariantList &list)
 {
-    switch (value.type()) {
-    case QVariant::String:      return argument << value.toString();
-    case QVariant::StringList:  return argument << value.toStringList();
-    case QVariant::Int:         return argument << value.toInt();
-    case QVariant::Bool:        return argument << value.toBool();
-    case QVariant::Double:      return argument << value.toDouble();
-    default:
-        if (value.userType() == qMetaTypeId<float>()) {
-            return argument << value.value<float>();
-        }
-        return argument;
+    QDBusArgument argument;
+    argument.beginArray(qMetaTypeId<T>());
+    foreach (const QVariant &item, list) {
+        argument << item.value<T>();
     }
+    argument.endArray();
+    return QVariant::fromValue(argument);
+}
+
+static QVariant readProperty(QObject *object, const QMetaProperty &property)
+{
+    QVariant value = property.read(object);
+
+    if (value.type() == QVariant::List) {
+        QVariantList variantList = value.toList();
+        if (variantList.count() > 0) {
+            switch (variantList.first().type()) {
+            case QVariant::String:      value = castList<QString>(variantList); break;
+            case QVariant::Int:         value = castList<int>(variantList); break;
+            case QVariant::UInt:        value = castList<uint>(variantList); break;
+            case QVariant::Bool:        value = castList<bool>(variantList); break;
+            case QVariant::Double:      value = castList<double>(variantList); break;
+            default: break;
+            }
+        }
+#ifdef QT_VERSION_5
+    } else if (value.userType() == qMetaTypeId<QJSValue>()) {
+        value = DeclarativeDBusInterface::marshallDBusArgument(value.value<QJSValue>());
+#endif
+    }
+
+    return value;
+}
+
+static QVariant readTypedProperty(QObject *object, const QMetaProperty &property, const QString &type)
+{
+    QVariant value = property.read(object);
+    if (type.length() == 1) {
+        switch (type.at(0).toLatin1()) {
+            case 'y': return QVariant(static_cast<signed char>((value.toInt() & 0x7f) | (value.toInt() < 0 ? 0x80 : 0)));
+            case 'n': return QVariant(static_cast<qint16>((value.toInt() & 0x7fff) | (value.toInt() < 0 ? 0x8000 : 0)));
+            case 'q': return QVariant(static_cast<quint16>(value.toUInt()));
+            case 'i': return QVariant(value.toInt());
+            case 'h':
+            case 'u': return QVariant(value.toUInt());
+            case 'x': return QVariant(static_cast<qint64>(value.toInt()));
+            case 't': return QVariant(static_cast<quint64>(value.toUInt()));
+            case 'v': return value;
+            case 'b': return QVariant(value.toBool());
+            case 'd': return QVariant(static_cast<double>(value.toDouble()));
+            case 's': return QVariant(value.toString());
+            case 'o': return QVariant::fromValue(QDBusObjectPath(value.toString()));
+            case 'g': return QVariant::fromValue(QDBusSignature(value.toString()));
+            default: break;
+        }
+    } else if (type.length() == 2 && (type.at(0).toLatin1() == 'a')) {
+        // The result must be an array of typed data
+        if (!value.type() != QVariant::List) {
+            qWarning() << "Invalid value for type specifier:" << type << "v:" << value;
+        }  else {
+            const QVariantList list = value.toList();
+            switch (type.at(1).toLatin1()) {
+                case 's': return QVariant(castList<QString>(list));
+                default: break;
+            }
+        }
+    }
+    qWarning() << "DeclarativeDBusInterface::typedCall - Invalid type specifier:" << type;
+    return QVariant();
 }
 
 bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QDBusConnection &connection)
@@ -196,19 +253,14 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
                 if (QLatin1String(property.name()) != member)
                     continue;
 
-                QVariant value = property.read(this);
-                if (value.type() == QVariant::List) {
-                    QVariantList variantList = value.toList();
-                    if (variantList.count() > 0) {
 
-                        QDBusArgument list;
-                        list.beginArray(variantList.first().userType());
-                        foreach (const QVariant &listValue, variantList) {
-                            list << listValue;
-                        }
-                        list.endArray();
-                        value = QVariant::fromValue(list);
-                    }
+                QVariant value;
+                const int typeIndex = meta->indexOfProperty(QByteArray("typeinfo_") + property.name());
+                if (typeIndex >= 0) {
+                    value = readTypedProperty(
+                                this, property, meta->property(typeIndex).read(this).toString());
+                } else {
+                    value = readProperty(this, property);
                 }
 
                 QDBusMessage reply = message.createReply(QVariantList() << value);
@@ -219,8 +271,7 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
         } else if (member == QLatin1String("GetAll")) {
             interface = dbusArguments.value(0).toString();
 
-            QDBusArgument map;
-            map.beginMap();
+            QVariantMap map;
 
             for (int propertyIndex = meta->propertyOffset();
                         propertyIndex < meta->propertyCount();
@@ -228,19 +279,26 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
                 QMetaProperty property = meta->property(propertyIndex);
 
                 QString propertyName = QLatin1String(property.name());
+
+                if (QByteArray(property.name()).startsWith("typeinfo_"))
+                    continue;
+
                 if (propertyName.startsWith(QLatin1String("rc")))
                     propertyName = propertyName.mid(2);
 
-                const QVariant value = property.read(this);
+                QVariant value;
+                const int typeIndex = meta->indexOfProperty(QByteArray("typeinfo_") + property.name());
+                if (typeIndex >= 0) {
+                    value = readTypedProperty(
+                                this, property, meta->property(typeIndex).read(this).toString());
+                } else {
+                    value = readProperty(this, property);
+                }
 
-                map.beginMapEntry();
-                map << propertyName;
-                map << value;
-                map.endMapEntry();
+                map.insert(propertyName, value);
             }
-            map.endMap();
 
-            QDBusMessage reply = message.createReply(QVariantList() << QVariant::fromValue(map));
+            QDBusMessage reply = message.createReply(QVariantList() << map);
             connection.call(reply, QDBus::NoBlock);
 
             return true;
@@ -384,6 +442,18 @@ void DeclarativeDBusAdaptor::emitSignalWithArguments(
 {
     QDBusMessage signal = QDBusMessage::createSignal(m_path, m_interface, name);
     signal.setArguments(DeclarativeDBusInterface::argumentsFromScriptValue(arguments));
+    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                   : QDBusConnection::systemBus();
+
+    if (!conn.send(signal))
+        qmlInfo(this) << conn.lastError();
+}
+
+void DeclarativeDBusAdaptor::emitSignalWithTypedArguments(
+        const QString &name, const QScriptValue &arguments)
+{
+    QDBusMessage signal = QDBusMessage::createSignal(m_path, m_interface, name);
+    signal.setArguments(DeclarativeDBusInterface::marshallDBusArguments(arguments));
     QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
                                                    : QDBusConnection::systemBus();
 

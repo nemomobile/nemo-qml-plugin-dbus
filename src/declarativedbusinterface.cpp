@@ -51,8 +51,18 @@ QT_BEGIN_NAMESPACE
 #endif
 QT_END_NAMESPACE
 
+enum CallType {
+    Call = 0,
+    TypedCall = 1,
+    TypedCallWithReturn = 2
+};
+
 DeclarativeDBusInterface::DeclarativeDBusInterface(QObject *parent)
-:   QObject(parent), m_busType(SessionBus), m_componentCompleted(false), m_signalsEnabled(false)
+    : QObject(parent)
+    , m_busType(SessionBus)
+    , m_componentCompleted(false)
+    , m_signalsEnabled(false)
+    , m_signalsIntrospected(false)
 {
 }
 
@@ -178,20 +188,28 @@ QVariantList DeclarativeDBusInterface::argumentsFromScriptValue(const QScriptVal
 
 void DeclarativeDBusInterface::call(const QString &method, const QScriptValue &arguments)
 {
-    QVariantList dbusArguments = argumentsFromScriptValue(arguments);
+    if (m_signalsEnabled && !m_signalsIntrospected) {
+        QueuedCall queuedcall;
+        queuedcall.type = Call;
+        queuedcall.method = method;
+        queuedcall.arguments = arguments;
+        m_queuedCalls.append(queuedcall);
+    } else {
+        QVariantList dbusArguments = argumentsFromScriptValue(arguments);
 
-    QDBusMessage message = QDBusMessage::createMethodCall(
-                m_destination,
-                m_path,
-                m_interface,
-                method);
-    message.setArguments(dbusArguments);
+        QDBusMessage message = QDBusMessage::createMethodCall(
+                    m_destination,
+                    m_path,
+                    m_interface,
+                    method);
+        message.setArguments(dbusArguments);
 
-    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
-                                                   : QDBusConnection::systemBus();
+        QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                       : QDBusConnection::systemBus();
 
-    if (!conn.send(message))
-        qmlInfo(this) << conn.lastError();
+        if (!conn.send(message))
+            qmlInfo(this) << conn.lastError();
+    }
 }
 
 namespace {
@@ -366,15 +384,23 @@ QVariant DeclarativeDBusInterface::parse(const QDBusArgument &argument)
 
 void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptValue &arguments)
 {
-    QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
-    if (message.type() == QDBusMessage::InvalidMessage)
-        return;
+    if (m_signalsEnabled && !m_signalsIntrospected) {
+        QueuedCall queuedcall;
+        queuedcall.type = TypedCall;
+        queuedcall.method = method;
+        queuedcall.arguments = arguments;
+        m_queuedCalls.append(queuedcall);
+    } else {
+        QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
+        if (message.type() == QDBusMessage::InvalidMessage)
+            return;
 
-    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
-                                                   : QDBusConnection::systemBus();
+        QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                       : QDBusConnection::systemBus();
 
-    if (!conn.send(message))
-        qmlInfo(this) << conn.lastError();
+        if (!conn.send(message))
+            qmlInfo(this) << conn.lastError();
+    }
 }
 
 void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const QScriptValue &arguments, const QScriptValue &callback)
@@ -387,19 +413,27 @@ void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const 
         qmlInfo(this) << "Callback argument is not a function";
         return;
     }
+    if (m_signalsEnabled && !m_signalsIntrospected) {
+        QueuedCall queuedcall;
+        queuedcall.type = TypedCallWithReturn;
+        queuedcall.method = method;
+        queuedcall.arguments = arguments;
+        queuedcall.callback = callback;
+        m_queuedCalls.append(queuedcall);
+    } else {
+        QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
+        if (message.type() == QDBusMessage::InvalidMessage)
+            return;
 
-    QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
-    if (message.type() == QDBusMessage::InvalidMessage)
-        return;
+        QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
+                                                       : QDBusConnection::systemBus();
 
-    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
-                                                   : QDBusConnection::systemBus();
-
-    QDBusPendingCall pendingCall = conn.asyncCall(message);
-    QDBusPendingCallWatcher *watcher = new QDBusPendingCallWatcher(pendingCall);
-    connect(watcher, SIGNAL(finished(QDBusPendingCallWatcher*)),
-            this, SLOT(pendingCallFinished(QDBusPendingCallWatcher*)));
-    m_pendingCalls.insert(watcher, callback);
+        QDBusPendingCall pendingCall = conn.asyncCall(message);
+        QDBusPendingCallWatcher *watcher = new QDBusPendingCallWatcher(pendingCall);
+        connect(watcher, SIGNAL(finished(QDBusPendingCallWatcher*)),
+                this, SLOT(pendingCallFinished(QDBusPendingCallWatcher*)));
+        m_pendingCalls.insert(watcher, callback);
+    }
 }
 
 QVariant DeclarativeDBusInterface::getProperty(const QString &name)
@@ -562,6 +596,19 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
         if (dbusSignals.isEmpty())
             break;
     }
+    m_signalsIntrospected = true;
+    // Flush queued calls since before signals are introspected calls that are expecting
+    // signals to emitted will not get them.
+    for (int i = 0; i < m_queuedCalls.count(); ++i) {
+        QueuedCall queuedCall = m_queuedCalls.at(i);
+        if (queuedCall.type == Call) {
+            call(queuedCall.method, queuedCall.arguments);
+        } else if (queuedCall.type == TypedCall) {
+            typedCall(queuedCall.method, queuedCall.arguments);
+        } else {
+            typedCallWithReturn(queuedCall.method, queuedCall.arguments, queuedCall.callback);
+        }
+    }
 }
 
 void DeclarativeDBusInterface::disconnectSignalHandler()
@@ -578,6 +625,7 @@ void DeclarativeDBusInterface::disconnectSignalHandler()
     }
 
     m_signals.clear();
+    m_signalsIntrospected = false;
 }
 
 void DeclarativeDBusInterface::connectSignalHandler()

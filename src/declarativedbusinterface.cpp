@@ -540,7 +540,9 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
     QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
                                                    : QDBusConnection::systemBus();
 
-    for (int i = 0; i < metaObject()->methodCount(); ++i) {
+    // Skip over signals defined in DeclarativeDBusInterface and its parent classes
+    // so only signals defined in qml are connected to.
+    for (int i = staticMetaObject.methodCount(); i < metaObject()->methodCount(); ++i) {
         QMetaMethod method = metaObject()->method(i);
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
@@ -549,6 +551,14 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
         QString methodName = QString::fromLatin1(method.signature());
         methodName.truncate(methodName.indexOf(QLatin1Char('(')));
 #endif
+
+        // Connect QML signals with the prefix 'rc' followed by an upper-case letter to
+        // DBus signals of the same name minus the prefix.
+        if (methodName.length() > 2
+                && methodName.startsWith(QStringLiteral("rc"))
+                && methodName.at(2).isUpper()) {
+            methodName.remove(0, 2);
+        }
 
         if (!dbusSignals.contains(methodName))
             continue;

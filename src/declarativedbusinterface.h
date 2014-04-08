@@ -41,11 +41,11 @@
 QT_BEGIN_NAMESPACE
 class QDBusArgument;
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-class QJSValue;
+#include <QJSValue>
 #define QScriptValue QJSValue
 #define QDeclarativeParserStatus QQmlParserStatus
 #else
-class QScriptValue;
+#include <QScriptValue>
 #endif
 
 class QUrl;
@@ -120,14 +120,23 @@ private:
     void disconnectSignalHandler();
     void connectSignalHandler();
 
+    struct QueuedCall {
+        int type;
+        QString method;
+        QScriptValue arguments;
+        QScriptValue callback;
+    };
+
     QString m_destination;
     QString m_path;
     QString m_interface;
     BusType m_busType;
     QMap<QDBusPendingCallWatcher *, QScriptValue> m_pendingCalls;
     QMap<QString, QMetaMethod> m_signals;
+    QList<QueuedCall> m_queuedCalls;
     bool m_componentCompleted;
     bool m_signalsEnabled;
+    bool m_signalsIntrospected;
 };
 
 #endif

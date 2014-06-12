@@ -26,28 +26,14 @@
 #define DECLARATIVEDBUSADAPTOR_H
 
 #include <QObject>
-#if QT_VERSION_5
-# include <QtQml>
-# include <QQmlParserStatus>
-# define QDeclarativeParserStatus QQmlParserStatus
-#else
-# include <QDeclarativeParserStatus>
-#endif
+#include <QtQml>
+#include <QQmlParserStatus>
+#include <QUrl>
+#include <QJSValue>
 
 #include <QDBusVirtualObject>
 
-QT_BEGIN_NAMESPACE
-class QUrl;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-class QJSValue;
-#define QScriptValue QJSValue
-#define QDeclarativeParserStatus QQmlParserStatus
-#else
-class QScriptValue;
-#endif
-QT_END_NAMESPACE
-
-class DeclarativeDBusAdaptor : public QDBusVirtualObject, public QDeclarativeParserStatus
+class DeclarativeDBusAdaptor : public QDBusVirtualObject, public QQmlParserStatus
 {
     Q_OBJECT
     Q_PROPERTY(QString service READ service WRITE setService NOTIFY serviceChanged)
@@ -56,7 +42,7 @@ class DeclarativeDBusAdaptor : public QDBusVirtualObject, public QDeclarativePar
     Q_PROPERTY(QString xml READ xml WRITE setXml NOTIFY xmlChanged)
     Q_PROPERTY(BusType busType READ busType WRITE setBusType NOTIFY busTypeChanged)
 
-    Q_INTERFACES(QDeclarativeParserStatus)
+    Q_INTERFACES(QQmlParserStatus)
     Q_ENUMS(BusType)
 
 public:
@@ -90,7 +76,7 @@ public:
     bool handleMessage(const QDBusMessage &message, const QDBusConnection &connection);
 
     Q_INVOKABLE void emitSignal(const QString &name);
-    Q_INVOKABLE void emitSignalWithArguments(const QString &name, const QScriptValue &arguments);
+    Q_INVOKABLE void emitSignalWithArguments(const QString &name, const QJSValue &arguments);
 
 signals:
     void serviceChanged();

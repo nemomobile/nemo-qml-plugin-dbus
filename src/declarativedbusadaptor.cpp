@@ -29,11 +29,7 @@
 #include <QDBusConnection>
 #include <QMetaMethod>
 
-#ifdef QT_VERSION_5
 #include <qqmlinfo.h>
-#else
-#include <qdeclarativeinfo.h>
-#endif
 #include <QtDebug>
 
 #include "declarativedbusinterface.h"
@@ -282,11 +278,7 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
         if (parameterTypes.count() != dbusArguments.count())
             continue;
 
-#ifdef QT_VERSION_5
         QByteArray sig(method.methodSignature());
-#else
-        QByteArray sig(method.signature());
-#endif
 
         if (!sig.startsWith(member.toLatin1() + "("))
             continue;
@@ -380,7 +372,7 @@ void DeclarativeDBusAdaptor::emitSignal(const QString &name)
 }
 
 void DeclarativeDBusAdaptor::emitSignalWithArguments(
-        const QString &name, const QScriptValue &arguments)
+        const QString &name, const QJSValue &arguments)
 {
     QDBusMessage signal = QDBusMessage::createSignal(m_path, m_interface, name);
     signal.setArguments(DeclarativeDBusInterface::argumentsFromScriptValue(arguments));

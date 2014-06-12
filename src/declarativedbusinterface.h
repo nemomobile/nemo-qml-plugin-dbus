@@ -30,30 +30,17 @@
 #include <QPair>
 #include <QPointer>
 #include <QVariant>
+#include <QDBusArgument>
+#include <QJSValue>
+#include <QQmlParserStatus>
 
-#if QT_VERSION_5
-#include <QtQml/QQmlParserStatus>
-#define QDeclarativeParserStatus QQmlParserStatus
-#else
-#include <QtDeclarative/QDeclarativeParserStatus>
-#endif
-
-QT_BEGIN_NAMESPACE
-class QDBusArgument;
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-class QJSValue;
-#define QScriptValue QJSValue
-#define QDeclarativeParserStatus QQmlParserStatus
-#else
-class QScriptValue;
-#endif
 
 class QUrl;
 class QDBusPendingCallWatcher;
 class QDBusMessage;
 QT_END_NAMESPACE
 
-class DeclarativeDBusInterface : public QObject, public QDeclarativeParserStatus
+class DeclarativeDBusInterface : public QObject, public QQmlParserStatus
 {
     Q_OBJECT
     Q_PROPERTY(QString destination READ destination WRITE setDestination NOTIFY destinationChanged)
@@ -64,7 +51,7 @@ class DeclarativeDBusInterface : public QObject, public QDeclarativeParserStatus
 
     Q_ENUMS(BusType)
 
-    Q_INTERFACES(QDeclarativeParserStatus)
+    Q_INTERFACES(QQmlParserStatus)
 
 public:
     DeclarativeDBusInterface(QObject *parent = 0);
@@ -90,11 +77,11 @@ public:
     bool signalsEnabled() const;
     void setSignalsEnabled(bool enabled);
 
-    Q_INVOKABLE void call(const QString &method, const QScriptValue &arguments);
-    Q_INVOKABLE void typedCall(const QString &method, const QScriptValue &arguments);
+    Q_INVOKABLE void call(const QString &method, const QJSValue &arguments);
+    Q_INVOKABLE void typedCall(const QString &method, const QJSValue &arguments);
 
-    Q_INVOKABLE void typedCallWithReturn(const QString &method, const QScriptValue &arguments,
-                                         const QScriptValue &callback);
+    Q_INVOKABLE void typedCallWithReturn(const QString &method, const QJSValue &arguments,
+                                         const QJSValue &callback);
 
     Q_INVOKABLE QVariant getProperty(const QString &name);
 
@@ -102,7 +89,7 @@ public:
     void componentComplete();
 
     static QVariant parse(const QDBusArgument &argument);
-    static QVariantList argumentsFromScriptValue(const QScriptValue &arguments);
+    static QVariantList argumentsFromScriptValue(const QJSValue &arguments);
 
 signals:
     void destinationChanged();
@@ -124,7 +111,7 @@ private:
     QString m_path;
     QString m_interface;
     BusType m_busType;
-    QMap<QDBusPendingCallWatcher *, QScriptValue> m_pendingCalls;
+    QMap<QDBusPendingCallWatcher *, QJSValue> m_pendingCalls;
     QMap<QString, QMetaMethod> m_signals;
     bool m_componentCompleted;
     bool m_signalsEnabled;

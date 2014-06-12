@@ -31,25 +31,13 @@
 #include <QDBusSignature>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
-#ifdef QT_VERSION_5
-# include <qqmlinfo.h>
-# include <QJSEngine>
-# include <QJSValue>
-# include <QJSValueIterator>
-#else
-# include <QScriptEngine>
-# include <QScriptValue>
-# include <qdeclarativeinfo.h>
-#endif
+#include <qqmlinfo.h>
+#include <QJSEngine>
+#include <QJSValue>
+#include <QJSValueIterator>
 #include <QFile>
 #include <QUrl>
 #include <QXmlStreamReader>
-
-QT_BEGIN_NAMESPACE
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-#define QScriptValueList QJSValueList
-#endif
-QT_END_NAMESPACE
 
 DeclarativeDBusInterface::DeclarativeDBusInterface(QObject *parent)
 :   QObject(parent), m_busType(SessionBus), m_componentCompleted(false), m_signalsEnabled(false)
@@ -148,12 +136,11 @@ void DeclarativeDBusInterface::setSignalsEnabled(bool enabled)
     }
 }
 
-QVariantList DeclarativeDBusInterface::argumentsFromScriptValue(const QScriptValue &arguments)
+QVariantList DeclarativeDBusInterface::argumentsFromScriptValue(const QJSValue &arguments)
 {
     QVariantList dbusArguments;
 
     if (arguments.isArray()) {
-#ifdef QT_VERSION_5
         QJSValueIterator it(arguments);
         while (it.hasNext()) {
             it.next();
@@ -162,21 +149,14 @@ QVariantList DeclarativeDBusInterface::argumentsFromScriptValue(const QScriptVal
                 continue;
             dbusArguments.append(it.value().toVariant());
         }
-#else
-        qScriptValueToSequence(arguments, dbusArguments);
-#endif
     } else if (!arguments.isUndefined()) {
-#ifdef QT_VERSION_5
         dbusArguments.append(arguments.toVariant());
-#else
-        dbusArguments.append(qscriptvalue_cast<QVariant>(arguments));
-#endif
     }
 
     return dbusArguments;
 }
 
-void DeclarativeDBusInterface::call(const QString &method, const QScriptValue &arguments)
+void DeclarativeDBusInterface::call(const QString &method, const QJSValue &arguments)
 {
     QVariantList dbusArguments = argumentsFromScriptValue(arguments);
 
@@ -206,27 +186,22 @@ T extractTypedList(const QVariantList &list)
     return rv;
 }
 
-QVariant marshallDBusArgument(const QScriptValue &arg)
+QVariant marshallDBusArgument(const QJSValue &arg)
 {
-    QScriptValue type = arg.property(QLatin1String("type"));
-    QScriptValue value = arg.property(QLatin1String("value"));
+    QJSValue type = arg.property(QLatin1String("type"));
+    QJSValue value = arg.property(QLatin1String("value"));
 
     if (!type.isString()) {
         qWarning() << "DeclarativeDBusInterface::typedCall - Invalid type";
         return QVariant();
     }
 
-#ifdef QT_VERSION_5
     bool valueValid = !value.isNull() && !value.isUndefined();
-#else
-    bool valueValid = value.isValid();
-#endif
 
     if (valueValid) {
         QString t = type.toString();
         if (t.length() == 1) {
             switch (t.at(0).toLatin1()) {
-#ifdef QT_VERSION_5
                 case 'y': return QVariant(static_cast<signed char>((value.toInt() & 0x7f) | (value.toInt() < 0 ? 0x80 : 0)));
                 case 'n': return QVariant(static_cast<qint16>((value.toInt() & 0x7fff) | (value.toInt() < 0 ? 0x8000 : 0)));
                 case 'q': return QVariant(static_cast<quint16>(value.toUInt()));
@@ -236,17 +211,6 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
                 case 'x': return QVariant(static_cast<qint64>(value.toInt()));
                 case 't': return QVariant(static_cast<quint64>(value.toUInt()));
                 case 'v': return value.toVariant();
-#else
-                case 'y': return QVariant(static_cast<signed char>((value.toInt32() & 0x7f) | (value.toInt32() < 0 ? 0x80 : 0)));
-                case 'n': return QVariant(static_cast<qint16>((value.toInt32() & 0x7fff) | (value.toInt32() < 0 ? 0x8000 : 0)));
-                case 'q': return QVariant(value.toUInt16());
-                case 'i': return QVariant(value.toInt32());
-                case 'h':
-                case 'u': return QVariant(value.toUInt32());
-                case 'x': return QVariant(static_cast<qint64>(value.toInt32()));
-                case 't': return QVariant(static_cast<quint64>(value.toUInt32()));
-                case 'v': return qscriptvalue_cast<QVariant>(value);
-#endif
                 case 'b': return QVariant(value.toBool());
                 case 'd': return QVariant(static_cast<double>(value.toNumber()));
                 case 's': return QVariant(value.toString());
@@ -276,16 +240,12 @@ QVariant marshallDBusArgument(const QScriptValue &arg)
 
 QDBusMessage constructMessage(const QString &destination, const QString &path,
                               const QString &interface, const QString &method,
-                              const QScriptValue &arguments)
+                              const QJSValue &arguments)
 {
     QVariantList dbusArguments;
 
     if (arguments.isArray()) {
-#ifdef QT_VERSION_5
         quint32 len = arguments.property(QLatin1String("length")).toUInt();
-#else
-        quint32 len = arguments.property(QLatin1String("length")).toUInt32();
-#endif
         for (quint32 i = 0; i < len; ++i) {
             QVariant value = marshallDBusArgument(arguments.property(i));
             if (!value.isValid()) {
@@ -364,7 +324,7 @@ QVariant DeclarativeDBusInterface::parse(const QDBusArgument &argument)
     }
 }
 
-void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptValue &arguments)
+void DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &arguments)
 {
     QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
     if (message.type() == QDBusMessage::InvalidMessage)
@@ -377,13 +337,9 @@ void DeclarativeDBusInterface::typedCall(const QString &method, const QScriptVal
         qmlInfo(this) << conn.lastError();
 }
 
-void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const QScriptValue &arguments, const QScriptValue &callback)
+void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const QJSValue &arguments, const QJSValue &callback)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     if (!callback.isCallable()) {
-#else
-    if (!callback.isFunction()) {
-#endif
         qmlInfo(this) << "Callback argument is not a function";
         return;
     }
@@ -443,15 +399,11 @@ void DeclarativeDBusInterface::componentComplete()
 
 void DeclarativeDBusInterface::pendingCallFinished(QDBusPendingCallWatcher *watcher)
 {
-    QScriptValue callback = m_pendingCalls.take(watcher);
+    QJSValue callback = m_pendingCalls.take(watcher);
 
     watcher->deleteLater();
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     if (!callback.isCallable())
-#else
-    if (!callback.isFunction())
-#endif
         return;
 
     QDBusPendingReply<> reply = *watcher;
@@ -463,7 +415,7 @@ void DeclarativeDBusInterface::pendingCallFinished(QDBusPendingCallWatcher *watc
 
     QDBusMessage message = reply.reply();
 
-    QScriptValueList callbackArguments;
+    QJSValueList callbackArguments;
 
     QVariantList arguments = message.arguments();
     foreach (QVariant argument, arguments) {
@@ -474,11 +426,7 @@ void DeclarativeDBusInterface::pendingCallFinished(QDBusPendingCallWatcher *watc
         callbackArguments << callback.engine()->toScriptValue<QVariant>(argument);
     }
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     callback.call(callbackArguments);
-#else
-    callback.call(QScriptValue(), callbackArguments);
-#endif
 }
 
 void DeclarativeDBusInterface::signalHandler(const QDBusMessage &message)
@@ -493,13 +441,8 @@ void DeclarativeDBusInterface::signalHandler(const QDBusMessage &message)
     }
 
     QMetaMethod method = m_signals.value(message.member());
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     if (!method.isValid())
         return;
-#else
-    if (!method.enclosingMetaObject())
-        return;
-#endif
 
     method.invoke(this, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7],
                   args[8], args[9]);
@@ -545,12 +488,7 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
     for (int i = staticMetaObject.methodCount(); i < metaObject()->methodCount(); ++i) {
         QMetaMethod method = metaObject()->method(i);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
         QString methodName = method.name();
-#else
-        QString methodName = QString::fromLatin1(method.signature());
-        methodName.truncate(methodName.indexOf(QLatin1Char('(')));
-#endif
 
         // Connect QML signals with the prefix 'rc' followed by an upper-case letter to
         // DBus signals of the same name minus the prefix.

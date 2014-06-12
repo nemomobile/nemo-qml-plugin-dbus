@@ -32,24 +32,16 @@
 
 #include <QtGlobal>
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-# include <QtQml>
-# include <QQmlExtensionPlugin>
-# define QDeclarativeExtensionPlugin QQmlExtensionPlugin
-#else
-# include <QtDeclarative>
-# include <QDeclarativeExtensionPlugin>
-#endif
+#include <QtQml>
+#include <QQmlExtensionPlugin>
 
 #include "declarativedbusadaptor.h"
 #include "declarativedbusinterface.h"
 
-class Q_DECL_EXPORT NemoDBusPlugin : public QDeclarativeExtensionPlugin
+class Q_DECL_EXPORT NemoDBusPlugin : public QQmlExtensionPlugin
 {
     Q_OBJECT
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     Q_PLUGIN_METADATA(IID "org.nemomobile.dbus")
-#endif
 public:
     void registerTypes(const char *uri)
     {
@@ -58,9 +50,5 @@ public:
         qmlRegisterType<DeclarativeDBusInterface>(uri, 1, 0, "DBusInterface");
     }
 };
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-Q_EXPORT_PLUGIN2(nemodbus, NemoDBusPlugin);
-#endif
 
 #include "plugin.moc"

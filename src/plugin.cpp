@@ -35,11 +35,14 @@
 #include <QtQml>
 #include <QQmlExtensionPlugin>
 
+// API Version 1.0
+#include "declarativedbusadaptor10.h"
+#include "declarativedbusinterface10.h"
+
+// API Version 2.0
 #include "declarativedbus.h"
 #include "declarativedbusadaptor.h"
-#include "declarativedbusadaptor10.h"
 #include "declarativedbusinterface.h"
-#include "declarativedbusinterface10.h"
 
 class Q_DECL_EXPORT NemoDBusPlugin : public QQmlExtensionPlugin
 {

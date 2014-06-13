@@ -1,10 +1,6 @@
 Nemo Mobile D-Bus QML Plugin
 ============================
 
-.. warning::
-
-   The API is not yet finalized and subject to change before the 1.0.0 release.
-
 The **Nemo Mobile D-Bus QML Plugin** allows you to access services on the system
 and session bus, as well as provide your own services. D-Bus is used for
 interprocess communication. Several system services expose an interface over
@@ -37,7 +33,7 @@ QML file:
 
 .. note::
 
-    The old ``import org.nemomobile.dbus 1.0`` is still supported, and legacy
+    The old ``import org.nemomobile.dbus 1.0`` is still available, and legacy
     code using the 0.0.x API should still work with it, but it is recommended
     that you use the 2.0 API, and update your code to work with it.
 

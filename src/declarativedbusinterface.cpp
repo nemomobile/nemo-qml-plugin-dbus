@@ -50,18 +50,18 @@ DeclarativeDBusInterface::~DeclarativeDBusInterface()
         delete watcher;
 }
 
-QString DeclarativeDBusInterface::destination() const
+QString DeclarativeDBusInterface::service() const
 {
-    return m_destination;
+    return m_service;
 }
 
-void DeclarativeDBusInterface::setDestination(const QString &destination)
+void DeclarativeDBusInterface::setService(const QString &service)
 {
-    if (m_destination != destination) {
+    if (m_service != service) {
         disconnectSignalHandler();
 
-        m_destination = destination;
-        emit destinationChanged();
+        m_service = service;
+        emit serviceChanged();
 
         connectSignalHandler();
     }
@@ -161,7 +161,7 @@ void DeclarativeDBusInterface::call(const QString &method, const QJSValue &argum
     QVariantList dbusArguments = argumentsFromScriptValue(arguments);
 
     QDBusMessage message = QDBusMessage::createMethodCall(
-                m_destination,
+                m_service,
                 m_path,
                 m_interface,
                 method);
@@ -238,7 +238,7 @@ QVariant marshallDBusArgument(const QJSValue &arg)
     return QVariant();
 }
 
-QDBusMessage constructMessage(const QString &destination, const QString &path,
+QDBusMessage constructMessage(const QString &service, const QString &path,
                               const QString &interface, const QString &method,
                               const QJSValue &arguments)
 {
@@ -262,7 +262,7 @@ QDBusMessage constructMessage(const QString &destination, const QString &path,
         dbusArguments.append(value);
     }
 
-    QDBusMessage message = QDBusMessage::createMethodCall(destination, path, interface, method);
+    QDBusMessage message = QDBusMessage::createMethodCall(service, path, interface, method);
     message.setArguments(dbusArguments);
 
     return message;
@@ -326,7 +326,7 @@ QVariant DeclarativeDBusInterface::parse(const QDBusArgument &argument)
 
 void DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &arguments)
 {
-    QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
+    QDBusMessage message = constructMessage(m_service, m_path, m_interface, method, arguments);
     if (message.type() == QDBusMessage::InvalidMessage)
         return;
 
@@ -344,7 +344,7 @@ void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const 
         return;
     }
 
-    QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
+    QDBusMessage message = constructMessage(m_service, m_path, m_interface, method, arguments);
     if (message.type() == QDBusMessage::InvalidMessage)
         return;
 
@@ -361,7 +361,7 @@ void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const 
 QVariant DeclarativeDBusInterface::getProperty(const QString &name)
 {
     QDBusMessage message =
-        QDBusMessage::createMethodCall(m_destination, m_path,
+        QDBusMessage::createMethodCall(m_service, m_path,
                                        QLatin1String("org.freedesktop.DBus.Properties"),
                                        QLatin1String("Get"));
 
@@ -504,7 +504,7 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
         dbusSignals.removeOne(methodName);
 
         m_signals.insert(methodName, method);
-        conn.connect(m_destination, m_path, m_interface, methodName,
+        conn.connect(m_service, m_path, m_interface, methodName,
                      this, SLOT(signalHandler(QDBusMessage)));
 
         if (dbusSignals.isEmpty())
@@ -521,7 +521,7 @@ void DeclarativeDBusInterface::disconnectSignalHandler()
                                                    : QDBusConnection::systemBus();
 
     foreach (const QString &signal, m_signals.keys()) {
-        conn.disconnect(m_destination, m_path, m_interface, signal,
+        conn.disconnect(m_service, m_path, m_interface, signal,
                         this, SLOT(signalHandler(QDBusMessage)));
     }
 
@@ -534,7 +534,7 @@ void DeclarativeDBusInterface::connectSignalHandler()
         return;
 
     QDBusMessage message =
-        QDBusMessage::createMethodCall(m_destination, m_path,
+        QDBusMessage::createMethodCall(m_service, m_path,
                                        QLatin1String("org.freedesktop.DBus.Introspectable"),
                                        QLatin1String("Introspect"));
 

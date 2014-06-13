@@ -116,9 +116,9 @@ properties of those objects.
 Properties
 ^^^^^^^^^^
 
-.. cpp:member:: string destination
+.. cpp:member:: string service
 
-    Name of the destination service on the bus (``x.y.z``)
+    D-Bus service name (``x.y.z``) of the destination object
 
 .. cpp:member:: string path
 
@@ -218,7 +218,7 @@ This code snippet talks to the profile daemon and sets the current profile to si
         DBusInterface {
             id: profiled
 
-            destination: 'com.nokia.profiled'
+            service: 'com.nokia.profiled'
             iface: 'com.nokia.profiled'
             path: '/com/nokia/profiled'
         }
@@ -244,7 +244,7 @@ to be called when the function result is available:
         DBusInterface {
             id: profiled
 
-            destination: 'com.nokia.profiled'
+            service: 'com.nokia.profiled'
             iface: 'com.nokia.profiled'
             path: '/com/nokia/profiled'
         }

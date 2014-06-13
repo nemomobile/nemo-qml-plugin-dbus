@@ -33,21 +33,22 @@
 #include <QDBusArgument>
 #include <QJSValue>
 #include <QQmlParserStatus>
-
-
-class QUrl;
-class QDBusPendingCallWatcher;
-class QDBusMessage;
-QT_END_NAMESPACE
+#include <QUrl>
+#include <QDBusPendingCallWatcher>
+#include <QDBusMessage>
 
 class DeclarativeDBusInterface : public QObject, public QQmlParserStatus
 {
     Q_OBJECT
-    Q_PROPERTY(QString destination READ destination WRITE setDestination NOTIFY destinationChanged)
+
+    Q_PROPERTY(QString service READ service WRITE setService NOTIFY serviceChanged)
     Q_PROPERTY(QString path READ path WRITE setPath NOTIFY pathChanged)
     Q_PROPERTY(QString iface READ interface WRITE setInterface NOTIFY interfaceChanged)
     Q_PROPERTY(BusType busType READ busType WRITE setBusType NOTIFY busTypeChanged)
     Q_PROPERTY(bool signalsEnabled READ signalsEnabled WRITE setSignalsEnabled NOTIFY signalsEnabledChanged)
+
+    // Deprecated alias, only used for compatibility with < 1.0.0 releases
+    Q_PROPERTY(QString destination READ service WRITE setService NOTIFY serviceChanged)
 
     Q_ENUMS(BusType)
 
@@ -57,8 +58,8 @@ public:
     DeclarativeDBusInterface(QObject *parent = 0);
     ~DeclarativeDBusInterface();
 
-    QString destination() const;
-    void setDestination(const QString &destination);
+    QString service() const;
+    void setService(const QString &service);
 
     QString path() const;
     void setPath(const QString &path);
@@ -92,7 +93,7 @@ public:
     static QVariantList argumentsFromScriptValue(const QJSValue &arguments);
 
 signals:
-    void destinationChanged();
+    void serviceChanged();
     void pathChanged();
     void interfaceChanged();
     void busTypeChanged();
@@ -107,7 +108,7 @@ private:
     void disconnectSignalHandler();
     void connectSignalHandler();
 
-    QString m_destination;
+    QString m_service;
     QString m_path;
     QString m_interface;
     BusType m_busType;

@@ -37,6 +37,8 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusMessage>
 
+#include "declarativedbus.h"
+
 class DeclarativeDBusInterface : public QObject, public QQmlParserStatus
 {
     Q_OBJECT
@@ -44,12 +46,13 @@ class DeclarativeDBusInterface : public QObject, public QQmlParserStatus
     Q_PROPERTY(QString service READ service WRITE setService NOTIFY serviceChanged)
     Q_PROPERTY(QString path READ path WRITE setPath NOTIFY pathChanged)
     Q_PROPERTY(QString iface READ interface WRITE setInterface NOTIFY interfaceChanged)
-    Q_PROPERTY(BusType busType READ busType WRITE setBusType NOTIFY busTypeChanged)
+    Q_PROPERTY(DeclarativeDBus::BusType busType READ busType WRITE setBusType NOTIFY busTypeChanged)
     Q_PROPERTY(bool signalsEnabled READ signalsEnabled WRITE setSignalsEnabled NOTIFY signalsEnabledChanged)
 
     // Deprecated alias, only used for compatibility with < 1.0.0 releases
     Q_PROPERTY(QString destination READ service WRITE setService NOTIFY serviceChanged)
 
+    // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
     Q_ENUMS(BusType)
 
     Q_INTERFACES(QQmlParserStatus)
@@ -67,13 +70,15 @@ public:
     QString interface() const;
     void setInterface(const QString &interface);
 
+    // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
+    // (in QML, use DBus.SessionBus instead of DBusInterface.SessionBus)
     enum BusType {
-        SystemBus,
-        SessionBus
+        SystemBus = DeclarativeDBus::SystemBus,
+        SessionBus = DeclarativeDBus::SessionBus
     };
 
-    BusType busType() const;
-    void setBusType(BusType busType);
+    DeclarativeDBus::BusType busType() const;
+    void setBusType(DeclarativeDBus::BusType busType);
 
     bool signalsEnabled() const;
     void setSignalsEnabled(bool enabled);
@@ -111,7 +116,7 @@ private:
     QString m_service;
     QString m_path;
     QString m_interface;
-    BusType m_busType;
+    DeclarativeDBus::BusType m_busType;
     QMap<QDBusPendingCallWatcher *, QJSValue> m_pendingCalls;
     QMap<QString, QMetaMethod> m_signals;
     bool m_componentCompleted;

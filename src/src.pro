@@ -16,10 +16,12 @@ INSTALLS += qmldir
 
 SOURCES += \
     plugin.cpp \
+    declarativedbus.cpp \
     declarativedbusadaptor.cpp \
     declarativedbusinterface.cpp
 
 HEADERS += \
+    declarativedbus.h \
     declarativedbusadaptor.h \
     declarativedbusinterface.h
 

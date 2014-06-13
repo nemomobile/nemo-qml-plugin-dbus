@@ -35,6 +35,7 @@
 #include <QtQml>
 #include <QQmlExtensionPlugin>
 
+#include "declarativedbus.h"
 #include "declarativedbusadaptor.h"
 #include "declarativedbusinterface.h"
 
@@ -46,6 +47,7 @@ public:
     void registerTypes(const char *uri)
     {
         Q_ASSERT(uri == QLatin1String("org.nemomobile.dbus"));
+        qmlRegisterUncreatableType<DeclarativeDBus>(uri, 1, 0, "DBus");
         qmlRegisterType<DeclarativeDBusAdaptor>(uri, 1, 0, "DBusAdaptor");
         qmlRegisterType<DeclarativeDBusInterface>(uri, 1, 0, "DBusInterface");
     }

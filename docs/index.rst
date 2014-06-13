@@ -64,25 +64,9 @@ Properties
 
 .. cpp:member:: BusType busType
 
-    Whether to use the session (:cpp:member:`DBusAdaptor.SessionBus`) or
-    system bus (:cpp:member:`DBusAdaptor.SystemBus`).
-    Default: :cpp:member:`DBusAdaptor.SessionBus`
-
-Enumerations
-^^^^^^^^^^^^
-
-.. note::
-
-    This should be merged into a ``DBus.BusType`` enum that can be used by both
-    ``DBusInterface`` and ``DBusAdaptor``.
-
-.. cpp:member:: BusType DBusAdaptor.SessionBus
-
-    D-Bus Session Bus (user session)
-
-.. cpp:member:: BusType DBusAdaptor.SystemBus
-
-    D-Bus System Bus (system-wide)
+    Whether to use the session (:cpp:member:`DBus.SessionBus`) or
+    system bus (:cpp:member:`DBus.SystemBus`).
+    Default: :cpp:member:`DBus.SessionBus`
 
 
 Signals
@@ -131,30 +115,14 @@ Properties
 .. cpp:member:: BusType busType
 
     Whether to use the session (:cpp:member:`DBusInterface.SessionBus`) or
-    system bus (:cpp:member:`DBusInterface.SystemBus`).
-    Default: :cpp:member:`DBusInterface.SessionBus`
+    system bus (:cpp:member:`DBus.SystemBus`).
+    Default: :cpp:member:`DBus.SessionBus`
 
 .. cpp:member:: bool signalsEnabled
 
     When set to ``true``, signals of the D-Bus object will be available as signals
     on the object. Those signals can be connected to via the usual QML means (a
     signal with the name ``signal`` would have a ``onSignal`` handler). Default: ``false``
-
-Enumerations
-^^^^^^^^^^^^
-
-.. note::
-
-    This should be merged into a ``DBus.BusType`` enum that can be used by both
-    ``DBusInterface`` and ``DBusAdaptor``.
-
-.. cpp:member:: BusType DBusInterface.SessionBus
-
-    D-Bus Session Bus (user session)
-
-.. cpp:member:: BusType DBusInterface.SystemBus
-
-    D-Bus System Bus (system-wide)
 
 Signals
 ^^^^^^^
@@ -200,6 +168,25 @@ Functions
 .. note::
 
     Is it also possible ot set properties on the D-Bus object? If so, how?
+
+DBus
+````
+
+The ``DBus`` class contains enumerations used by both ``DBusAdaptor`` and
+``DBusInterface``. This class cannot be instantiated, but is only used for
+referring to the enumeration values.
+
+Enumerations
+^^^^^^^^^^^^
+
+.. cpp:member:: BusType DBus.SessionBus
+
+    D-Bus Session Bus (user session)
+
+.. cpp:member:: BusType DBus.SystemBus
+
+    D-Bus System Bus (system-wide)
+
 
 Examples
 --------

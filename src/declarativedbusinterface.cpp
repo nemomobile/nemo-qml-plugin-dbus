@@ -40,7 +40,7 @@
 #include <QXmlStreamReader>
 
 DeclarativeDBusInterface::DeclarativeDBusInterface(QObject *parent)
-:   QObject(parent), m_bus(SessionBus), m_componentCompleted(false), m_signalsEnabled(false)
+:   QObject(parent), m_bus(DeclarativeDBus::SessionBus), m_componentCompleted(false), m_signalsEnabled(false)
 {
 }
 
@@ -476,7 +476,7 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
     if (dbusSignals.isEmpty())
         return;
 
-    QDBusConnection conn = DeclarativeDBus::connetion(m_bus);
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     // Skip over signals defined in DeclarativeDBusInterface and its parent classes
     // so only signals defined in qml are connected to.

@@ -22,21 +22,17 @@
 ** 
 ****************************************************************************************/
 
-#include "declarativedbus.h"
+#include "declarativedbusinterface10.h"
 
-DeclarativeDBus::DeclarativeDBus(QObject *parent)
+DeclarativeDBusInterface10::DeclarativeDBusInterface10(QObject *parent)
+    : DeclarativeDBusInterface(parent)
 {
+    connect(this, SIGNAL(serviceChanged()),
+            this, SIGNAL(destinationChanged()));
+    connect(this, SIGNAL(busChanged()),
+            this, SIGNAL(busTypeChanged()));
 }
 
-DeclarativeDBus::~DeclarativeDBus()
+DeclarativeDBusInterface10::~DeclarativeDBusInterface10()
 {
-}
-
-QDBusConnection DeclarativeDBus::connection(DeclarativeDBus::BusType bus)
-{
-    if (bus == SessionBus) {
-        return QDBusConnection::sessionBus();
-    } else {
-        return QDBusConnection::systemBus();
-    }
 }

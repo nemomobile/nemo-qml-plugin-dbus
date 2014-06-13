@@ -24,7 +24,7 @@ their services are needed. (from the `D-Bus homepage`_)
 
 .. _D-Bus homepage: http://www.freedesktop.org/wiki/Software/dbus/ 
 
-org.nemomobile.dbus 1.0
+org.nemomobile.dbus 2.0
 -----------------------
 
 To use ``DBusAdaptor`` and ``DBusInterface`` in your QML code, you need to
@@ -33,7 +33,13 @@ QML file:
 
 .. code-block:: javascript
 
-    import org.nemomobile.dbus 1.0
+    import org.nemomobile.dbus 2.0
+
+.. note::
+
+    The old ``import org.nemomobile.dbus 1.0`` is still supported, and legacy
+    code using the 0.0.x API should still work with it, but it is recommended
+    that you use the 2.0 API, and update your code to work with it.
 
 DBusAdaptor
 ```````````
@@ -199,7 +205,7 @@ This code snippet talks to the profile daemon and sets the current profile to si
 .. code::
 
     import QtQuick 2.0
-    import org.nemomobile.dbus 1.0
+    import org.nemomobile.dbus 2.0
 
     Item {
         DBusInterface {
@@ -225,7 +231,7 @@ to be called when the function result is available:
 .. code::
 
     import QtQuick 2.0
-    import org.nemomobile.dbus 1.0
+    import org.nemomobile.dbus 2.0
 
     Item {
         DBusInterface {

@@ -44,13 +44,7 @@ class DeclarativeDBusAdaptor : public QDBusVirtualObject, public QQmlParserStatu
     Q_PROPERTY(QString xml READ xml WRITE setXml NOTIFY xmlChanged)
     Q_PROPERTY(DeclarativeDBus::BusType bus READ bus WRITE setBus NOTIFY busChanged)
 
-    // Deprecated alias, only used for compatibility with < 1.0.0 releases
-    Q_PROPERTY(DeclarativeDBus::BusType busType READ bus WRITE setBus NOTIFY busChanged)
-
     Q_INTERFACES(QQmlParserStatus)
-
-    // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
-    Q_ENUMS(BusType)
 
 public:
     DeclarativeDBusAdaptor(QObject *parent = 0);
@@ -67,13 +61,6 @@ public:
 
     QString xml() const;
     void setXml(const QString &xml);
-
-    // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
-    // (in QML, use DBus.SessionBus instead of DBusAdaptor.SessionBus)
-    enum BusType {
-        SystemBus = DeclarativeDBus::SystemBus,
-        SessionBus = DeclarativeDBus::SessionBus
-    };
 
     DeclarativeDBus::BusType bus() const;
     void setBus(DeclarativeDBus::BusType bus);

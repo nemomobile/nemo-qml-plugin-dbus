@@ -22,21 +22,36 @@
 ** 
 ****************************************************************************************/
 
-#include "declarativedbus.h"
+#ifndef DECLARATIVEDBUSINTERFACE10_H
+#define DECLARATIVEDBUSINTERFACE10_H
 
-DeclarativeDBus::DeclarativeDBus(QObject *parent)
-{
-}
+#include "declarativedbusinterface.h"
 
-DeclarativeDBus::~DeclarativeDBus()
+class DeclarativeDBusInterface10 : public DeclarativeDBusInterface
 {
-}
+    Q_OBJECT
 
-QDBusConnection DeclarativeDBus::connection(DeclarativeDBus::BusType bus)
-{
-    if (bus == SessionBus) {
-        return QDBusConnection::sessionBus();
-    } else {
-        return QDBusConnection::systemBus();
-    }
-}
+    // Deprecated aliases, only used for compatibility with < 1.0.0 releases
+    Q_PROPERTY(QString destination READ service WRITE setService NOTIFY destinationChanged)
+    Q_PROPERTY(DeclarativeDBus::BusType busType READ bus WRITE setBus NOTIFY busTypeChanged)
+
+    // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
+    Q_ENUMS(BusType)
+
+public:
+    DeclarativeDBusInterface10(QObject *parent = 0);
+    ~DeclarativeDBusInterface10();
+
+    // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
+    // (in QML, use DBus.SessionBus instead of DBusInterface.SessionBus)
+    enum BusType {
+        SystemBus = DeclarativeDBus::SystemBus,
+        SessionBus = DeclarativeDBus::SessionBus
+    };
+
+signals:
+    void destinationChanged();
+    void busTypeChanged();
+};
+
+#endif

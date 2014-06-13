@@ -49,13 +49,6 @@ class DeclarativeDBusInterface : public QObject, public QQmlParserStatus
     Q_PROPERTY(DeclarativeDBus::BusType bus READ bus WRITE setBus NOTIFY busChanged)
     Q_PROPERTY(bool signalsEnabled READ signalsEnabled WRITE setSignalsEnabled NOTIFY signalsEnabledChanged)
 
-    // Deprecated aliases, only used for compatibility with < 1.0.0 releases
-    Q_PROPERTY(QString destination READ service WRITE setService NOTIFY serviceChanged)
-    Q_PROPERTY(DeclarativeDBus::BusType busType READ bus WRITE setBus NOTIFY busChanged)
-
-    // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
-    Q_ENUMS(BusType)
-
     Q_INTERFACES(QQmlParserStatus)
 
 public:
@@ -70,13 +63,6 @@ public:
 
     QString interface() const;
     void setInterface(const QString &interface);
-
-    // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
-    // (in QML, use DBus.SessionBus instead of DBusInterface.SessionBus)
-    enum BusType {
-        SystemBus = DeclarativeDBus::SystemBus,
-        SessionBus = DeclarativeDBus::SessionBus
-    };
 
     DeclarativeDBus::BusType bus() const;
     void setBus(DeclarativeDBus::BusType bus);

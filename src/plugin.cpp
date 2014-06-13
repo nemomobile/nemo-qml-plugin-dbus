@@ -37,7 +37,9 @@
 
 #include "declarativedbus.h"
 #include "declarativedbusadaptor.h"
+#include "declarativedbusadaptor10.h"
 #include "declarativedbusinterface.h"
+#include "declarativedbusinterface10.h"
 
 class Q_DECL_EXPORT NemoDBusPlugin : public QQmlExtensionPlugin
 {
@@ -47,9 +49,15 @@ public:
     void registerTypes(const char *uri)
     {
         Q_ASSERT(uri == QLatin1String("org.nemomobile.dbus"));
-        qmlRegisterUncreatableType<DeclarativeDBus>(uri, 1, 0, "DBus");
-        qmlRegisterType<DeclarativeDBusAdaptor>(uri, 1, 0, "DBusAdaptor");
-        qmlRegisterType<DeclarativeDBusInterface>(uri, 1, 0, "DBusInterface");
+
+        // QML API 1.0 (backwards compatible to 0.0.x versions)
+        qmlRegisterType<DeclarativeDBusAdaptor10>(uri, 1, 0, "DBusAdaptor");
+        qmlRegisterType<DeclarativeDBusInterface10>(uri, 1, 0, "DBusInterface");
+
+        // QML API 2.0 (with deprecated fields removed)
+        qmlRegisterUncreatableType<DeclarativeDBus>(uri, 2, 0, "DBus", "Cannot create DBus objects");
+        qmlRegisterType<DeclarativeDBusAdaptor>(uri, 2, 0, "DBusAdaptor");
+        qmlRegisterType<DeclarativeDBusInterface>(uri, 2, 0, "DBusInterface");
     }
 };
 

@@ -26,29 +26,23 @@
 #define DECLARATIVEDBUS_H
 
 #include <QObject>
-#include <QQmlParserStatus>
 #include <QDBusConnection>
 
-class DeclarativeDBus : public QQmlParserStatus
+class DeclarativeDBus : public QObject
 {
     Q_OBJECT
-
-    Q_INTERFACES(QQmlParserStatus)
     Q_ENUMS(BusType)
 
 public:
     DeclarativeDBus(QObject *parent=0);
     ~DeclarativeDBus();
 
-    QDBusConnection connection(BusType bus);
-
     enum BusType {
         SystemBus,
         SessionBus
     };
 
-    void classBegin();
-    void componentComplete();
+    static QDBusConnection connection(BusType bus);
 };
 
 #endif

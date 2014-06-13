@@ -22,21 +22,36 @@
 ** 
 ****************************************************************************************/
 
-#include "declarativedbus.h"
+#ifndef DECLARATIVEDBUSADAPTOR10_H
+#define DECLARATIVEDBUSADAPTOR10_H
 
-DeclarativeDBus::DeclarativeDBus(QObject *parent)
-{
-}
+#include "declarativedbusadaptor.h"
 
-DeclarativeDBus::~DeclarativeDBus()
+// This class contains compatibility enums and property aliases for exposing
+// the old DBusAdaptor QML API when users import this plug-in as "1.0".
+class DeclarativeDBusAdaptor10 : public DeclarativeDBusAdaptor
 {
-}
+    Q_OBJECT
 
-QDBusConnection DeclarativeDBus::connection(DeclarativeDBus::BusType bus)
-{
-    if (bus == SessionBus) {
-        return QDBusConnection::sessionBus();
-    } else {
-        return QDBusConnection::systemBus();
-    }
-}
+    // Deprecated alias, only used for compatibility with < 1.0.0 releases
+    Q_PROPERTY(DeclarativeDBus::BusType busType READ bus WRITE setBus NOTIFY busTypeChanged)
+
+    // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
+    Q_ENUMS(BusType)
+
+public:
+    DeclarativeDBusAdaptor10(QObject *parent = 0);
+    ~DeclarativeDBusAdaptor10();
+
+    // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
+    // (in QML, use DBus.SessionBus instead of DBusAdaptor.SessionBus)
+    enum BusType {
+        SystemBus = DeclarativeDBus::SystemBus,
+        SessionBus = DeclarativeDBus::SessionBus
+    };
+
+signals:
+    void busTypeChanged();
+};
+
+#endif

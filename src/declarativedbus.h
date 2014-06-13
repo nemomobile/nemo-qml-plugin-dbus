@@ -40,7 +40,7 @@ public:
     DeclarativeDBus(QObject *parent=0);
     ~DeclarativeDBus();
 
-    QDBusConnection connection(BusType busType);
+    QDBusConnection connection(BusType bus);
 
     enum BusType {
         SystemBus,

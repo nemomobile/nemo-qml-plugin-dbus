@@ -62,7 +62,7 @@ Properties
     XML string containing the D-Bus introspection metadata for
     this object
 
-.. cpp:member:: BusType busType
+.. cpp:member:: BusType bus
 
     Whether to use the session (:cpp:member:`DBus.SessionBus`) or
     system bus (:cpp:member:`DBus.SystemBus`).
@@ -112,7 +112,7 @@ Properties
 
     D-Bus interface name (``x.y.z``) of the destination object
 
-.. cpp:member:: BusType busType
+.. cpp:member:: BusType bus
 
     Whether to use the session (:cpp:member:`DBusInterface.SessionBus`) or
     system bus (:cpp:member:`DBus.SystemBus`).

@@ -40,7 +40,7 @@
 #include <QXmlStreamReader>
 
 DeclarativeDBusInterface::DeclarativeDBusInterface(QObject *parent)
-:   QObject(parent), m_busType(SessionBus), m_componentCompleted(false), m_signalsEnabled(false)
+:   QObject(parent), m_bus(SessionBus), m_componentCompleted(false), m_signalsEnabled(false)
 {
 }
 
@@ -101,18 +101,18 @@ void DeclarativeDBusInterface::setInterface(const QString &interface)
     }
 }
 
-DeclarativeDBus::BusType DeclarativeDBusInterface::busType() const
+DeclarativeDBus::BusType DeclarativeDBusInterface::bus() const
 {
-    return m_busType;
+    return m_bus;
 }
 
-void DeclarativeDBusInterface::setBusType(DeclarativeDBus::BusType busType)
+void DeclarativeDBusInterface::setBus(DeclarativeDBus::BusType bus)
 {
-    if (m_busType != busType) {
+    if (m_bus != bus) {
         disconnectSignalHandler();
 
-        m_busType = busType;
-        emit busTypeChanged();
+        m_bus = bus;
+        emit busChanged();
 
         connectSignalHandler();
     }
@@ -167,7 +167,7 @@ void DeclarativeDBusInterface::call(const QString &method, const QJSValue &argum
                 method);
     message.setArguments(dbusArguments);
 
-    QDBusConnection conn = DeclarativeDBus::connection(m_busType);
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     if (!conn.send(message))
         qmlInfo(this) << conn.lastError();
@@ -329,7 +329,7 @@ void DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &
     if (message.type() == QDBusMessage::InvalidMessage)
         return;
 
-    QDBusConnection conn = DeclarativeDBus::connection(m_busType);
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     if (!conn.send(message))
         qmlInfo(this) << conn.lastError();
@@ -346,7 +346,7 @@ void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const 
     if (message.type() == QDBusMessage::InvalidMessage)
         return;
 
-    QDBusConnection conn = DeclarativeDBus::connection(m_busType);
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     QDBusPendingCall pendingCall = conn.asyncCall(message);
     QDBusPendingCallWatcher *watcher = new QDBusPendingCallWatcher(pendingCall);
@@ -368,7 +368,7 @@ QVariant DeclarativeDBusInterface::getProperty(const QString &name)
 
     message.setArguments(args);
 
-    QDBusConnection conn = DeclarativeDBus::connection(m_busType);
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     QDBusMessage reply = conn.call(message);
     if (reply.type() == QDBusMessage::ErrorMessage)
@@ -476,7 +476,7 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
     if (dbusSignals.isEmpty())
         return;
 
-    QDBusConnection conn = DeclarativeDBus::connetion(m_busType);
+    QDBusConnection conn = DeclarativeDBus::connetion(m_bus);
 
     // Skip over signals defined in DeclarativeDBusInterface and its parent classes
     // so only signals defined in qml are connected to.
@@ -512,7 +512,7 @@ void DeclarativeDBusInterface::disconnectSignalHandler()
     if (m_signals.isEmpty())
         return;
 
-    QDBusConnection conn = DeclarativeDBus::connection(m_busType);
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     foreach (const QString &signal, m_signals.keys()) {
         conn.disconnect(m_service, m_path, m_interface, signal,
@@ -535,7 +535,7 @@ void DeclarativeDBusInterface::connectSignalHandler()
     if (message.type() == QDBusMessage::InvalidMessage)
         return;
 
-    QDBusConnection conn = DeclarativeDBus::connection(m_busType);
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     if (!conn.callWithCallback(message, this, SLOT(connectSignalHandlerCallback(QString))))
         qmlInfo(this) << "Failed to introspect interface" << conn.lastError();

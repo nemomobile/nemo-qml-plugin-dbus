@@ -32,9 +32,9 @@ DeclarativeDBus::~DeclarativeDBus()
 {
 }
 
-QDBusConnection DeclarativeDBus::connection(BusType busType)
+QDBusConnection DeclarativeDBus::connection(BusType bus)
 {
-    if (busType == SessionBus) {
+    if (bus == SessionBus) {
         return QDBusConnection::SessionBus();
     } else {
         return QDBusConnection::SystemBus();

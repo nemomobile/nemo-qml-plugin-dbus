@@ -42,7 +42,10 @@ class DeclarativeDBusAdaptor : public QDBusVirtualObject, public QQmlParserStatu
     Q_PROPERTY(QString path READ path WRITE setPath NOTIFY pathChanged)
     Q_PROPERTY(QString iface READ interface WRITE setInterface NOTIFY interfaceChanged)
     Q_PROPERTY(QString xml READ xml WRITE setXml NOTIFY xmlChanged)
-    Q_PROPERTY(DeclarativeDBus::BusType busType READ busType WRITE setBusType NOTIFY busTypeChanged)
+    Q_PROPERTY(DeclarativeDBus::BusType bus READ bus WRITE setBus NOTIFY busChanged)
+
+    // Deprecated alias, only used for compatibility with < 1.0.0 releases
+    Q_PROPERTY(DeclarativeDBus::BusType busType READ bus WRITE setBus NOTIFY busChanged)
 
     Q_INTERFACES(QQmlParserStatus)
 
@@ -72,8 +75,8 @@ public:
         SessionBus = DeclarativeDBus::SessionBus
     };
 
-    DeclarativeDBus::BusType busType() const;
-    void setBusType(DeclarativeDBus::BusType busType);
+    DeclarativeDBus::BusType bus() const;
+    void setBus(DeclarativeDBus::BusType bus);
 
     void classBegin();
     void componentComplete();
@@ -89,14 +92,14 @@ signals:
     void pathChanged();
     void interfaceChanged();
     void xmlChanged();
-    void busTypeChanged();
+    void busChanged();
 
 private:
     QString m_service;
     QString m_path;
     QString m_interface;
     QString m_xml;
-    DeclarativeDBus::BusType m_busType;
+    DeclarativeDBus::BusType m_bus;
 };
 
 #endif

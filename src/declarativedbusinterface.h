@@ -46,11 +46,12 @@ class DeclarativeDBusInterface : public QObject, public QQmlParserStatus
     Q_PROPERTY(QString service READ service WRITE setService NOTIFY serviceChanged)
     Q_PROPERTY(QString path READ path WRITE setPath NOTIFY pathChanged)
     Q_PROPERTY(QString iface READ interface WRITE setInterface NOTIFY interfaceChanged)
-    Q_PROPERTY(DeclarativeDBus::BusType busType READ busType WRITE setBusType NOTIFY busTypeChanged)
+    Q_PROPERTY(DeclarativeDBus::BusType bus READ bus WRITE setBus NOTIFY busChanged)
     Q_PROPERTY(bool signalsEnabled READ signalsEnabled WRITE setSignalsEnabled NOTIFY signalsEnabledChanged)
 
-    // Deprecated alias, only used for compatibility with < 1.0.0 releases
+    // Deprecated aliases, only used for compatibility with < 1.0.0 releases
     Q_PROPERTY(QString destination READ service WRITE setService NOTIFY serviceChanged)
+    Q_PROPERTY(DeclarativeDBus::BusType busType READ bus WRITE setBus NOTIFY busChanged)
 
     // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
     Q_ENUMS(BusType)
@@ -77,8 +78,8 @@ public:
         SessionBus = DeclarativeDBus::SessionBus
     };
 
-    DeclarativeDBus::BusType busType() const;
-    void setBusType(DeclarativeDBus::BusType busType);
+    DeclarativeDBus::BusType bus() const;
+    void setBus(DeclarativeDBus::BusType bus);
 
     bool signalsEnabled() const;
     void setSignalsEnabled(bool enabled);
@@ -101,7 +102,7 @@ signals:
     void serviceChanged();
     void pathChanged();
     void interfaceChanged();
-    void busTypeChanged();
+    void busChanged();
     void signalsEnabledChanged();
 
 private slots:
@@ -116,7 +117,7 @@ private:
     QString m_service;
     QString m_path;
     QString m_interface;
-    DeclarativeDBus::BusType m_busType;
+    DeclarativeDBus::BusType m_bus;
     QMap<QDBusPendingCallWatcher *, QJSValue> m_pendingCalls;
     QMap<QString, QMetaMethod> m_signals;
     bool m_componentCompleted;

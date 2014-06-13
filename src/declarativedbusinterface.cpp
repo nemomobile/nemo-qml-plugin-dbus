@@ -500,12 +500,25 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
 
         QString methodName = method.name();
 
-        // Connect QML signals with the prefix 'rc' followed by an upper-case letter to
-        // DBus signals of the same name minus the prefix.
+        // API version 1.0 name mangling:
+        // Connect QML signals with the prefix 'rc' followed by an upper-case
+        // letter to DBus signals of the same name minus the prefix.
         if (methodName.length() > 2
                 && methodName.startsWith(QStringLiteral("rc"))
                 && methodName.at(2).isUpper()) {
             methodName.remove(0, 2);
+        } else if (methodName.length() >= 2) {
+            // API version 2.0 name mangling:
+            //  "methodName" -> "MethodName" (if a corresponding signal exists)
+            QString methodNameUpperCase = methodName.at(0).toUpper() +
+                methodName.mid(1);
+
+            // Only do name mangling if the lower case version does not exist,
+            // and the upper case version does exist.
+            if (!dbusSignals.contains(methodName) &&
+                 dbusSignals.contains(methodNameUpperCase)) {
+                methodName = methodNameUpperCase;
+            }
         }
 
         if (!dbusSignals.contains(methodName))

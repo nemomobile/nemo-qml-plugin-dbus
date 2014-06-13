@@ -114,17 +114,66 @@ Properties
 
 .. cpp:member:: bool signalsEnabled
 
-    When set to ``true``, signals of the D-Bus object will be available as signals
-    on the object. Those signals can be connected to via the usual QML means (a
-    signal with the name ``signal`` would have a ``onSignal`` handler). Default: ``false``
+    When set to ``true``, signals of the D-Bus object will be connected to functions
+    defined on the object (see below for examples). Default: ``false``
 
 Signals
 ^^^^^^^
 
 The ``DBusInterface`` object does not have any signals by itself. However,
 if :cpp:member:`signalsEnabled` is set to ``true``, signals of the
-destination object will be dynamically exposed as signals that can be
-connected to.
+destination object will be connected to functions on the object that have the
+same name.
+
+**Example**: Imagine a D-Bus object in service ``org.example.service`` at path
+``/org/example/service`` and interface ``org.example.intf`` has two signals,
+``UpdateAll`` and ``UpdateOne``. You can handle these signals this way:
+
+.. code::
+
+    DBusInterface {
+        service: 'org.example.service'
+        path: '/org/example/service'
+        iface: 'org.example.intf'
+
+        signalsEnabled: true
+
+        function updateAll() {
+            // Will be called when the "UpdateAll" signal is sent
+        }
+
+        function updateOne(a, b) {
+            // Will be called when the "UpdateOne" signal is sent
+        }
+    }
+
+In case a D-Bus object has two signals that only differ in the case of their
+first letter (e.g. ``UpdateAll`` and ``updateAll``), you can prefix the handler
+function with ``rc`` (*remote call*) to write a handler for the uppercase function
+(the lower case function in this case will handle the lower case signal):
+
+.. code::
+
+    DBusInterface {
+        ...
+        signalsEnabled: true
+
+        // Assuming the target object has two signals,
+        //   1. UpdateAll (with uppercase first character)
+        //   2. updateAll (with lowercase first character)
+
+        function rcUpdateAll() {
+            // Will handle the "UpdateAll" signal
+        }
+
+        function updateAll() {
+            // Will handle the "updateAll" signal
+        }
+    }
+
+This name mangling is necessary, because in D-Bus, signal names (as well as function
+names) usually start with an uppercase letter, whereas in QML, function names on
+objects must start with lowercase letters.
 
 Functions
 ^^^^^^^^^
@@ -261,6 +310,9 @@ Version 2.0
 * Merged ``emitSignal`` and ``emitSignalWithArguments`` into a single function,
   ``emitSignal`` that can handle an optional ``arguments`` parameter
 * Add new method ``setProperty`` to ``DBusInterface`` for setting D-Bus properties
+* The connection handling when ``signalsEnabled`` is ``true`` can now automatically
+  connect lowercase JavaScript handler functions to uppercase D-Bus signals if a
+  corresponding lowercase D-Bus signal does not exist on the object.
 
 Version 1.0
 ```````````

@@ -149,9 +149,11 @@ Functions
 
     Get the D-Bus property ``name`` from the object and return it.
 
-.. note::
+.. cpp:function:: void setProperty(string name, var value)
 
-    Is it also possible ot set properties on the D-Bus object? If so, how?
+    Set the object's D-Bus property ``name`` to ``value``.
+
+.. versionadded:: 2.0.0
 
 DBus
 ````
@@ -262,6 +264,7 @@ Version 2.0
   ``typedCall`` that can handle an optional ``callback`` parameter
 * Merged ``emitSignal`` and ``emitSignalWithArguments`` into a single function,
   ``emitSignal`` that can handle an optional ``arguments`` parameter
+* Add new method ``setProperty`` to ``DBusInterface`` for setting D-Bus properties
 
 Version 1.0
 ```````````

@@ -382,6 +382,22 @@ QVariant DeclarativeDBusInterface::getProperty(const QString &name)
         return v;
 }
 
+void DeclarativeDBusInterface::setProperty(const QString &name, const QVariant &value)
+{
+    QDBusMessage message = QDBusMessage::createMethodCall(m_service, m_path,
+            QLatin1String("org.freedesktop.DBus.Properties"),
+            QLatin1String("Set"));
+
+    QVariantList args;
+    args.append(m_interface);
+    args.append(name);
+    args.append(value);
+
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
+    if (!conn.send(message))
+        qmlInfo(this) << conn.lastError();
+}
+
 void DeclarativeDBusInterface::classBegin()
 {
 }

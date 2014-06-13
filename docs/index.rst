@@ -83,18 +83,10 @@ None.
 Functions
 ^^^^^^^^^
 
-.. cpp:function:: void emitSignal(string name)
+.. cpp:function:: void emitSignal(string name, var arguments=undefined)
 
-    Emit a signal with the given ``name`` and no arguments.
-
-.. cpp:function:: void emitSignalWithArguments(string name, var arguments)
-
-    Emit a signal with the given ``name`` and ``arguments``.
-
-.. note::
-
-    Maybe we can combine both ``emitSignal`` and ``emitSignalWithArguments``
-    as just a single function ``emitSignal`` that takes an optional second parameter?
+    Emit a signal with the given ``name`` and ``arguments``. If ``arguments`` is
+    undefined (the default), then the signal will be emitted without arguments.
 
 DBusInterface
 `````````````
@@ -146,26 +138,12 @@ Functions
     Call a D-Bus method with the name ``method`` on the object with ``arguments``
     as argument list. For a function with no arguments, pass in ``[]`` (empty array).
 
-.. cpp:function:: void typedCall(string method, var arguments)
-
-    TODO
-
-.. note::
-
-    Same? Why is that needed? What's the difference? When would I use this
-    in favor of ``call``? Maybe we only need one of both?
-
-.. cpp:function:: void typedCallWithReturn(string method, var arguments, var callback)
+.. cpp:function:: void typedCall(string method, var arguments, var callback=undefined)
 
     Call a D-Bus method with the name ``method`` on the object with ``arguments``
     as argument list. When the function returns, call ``callback`` with a single
-    argument that is the return value.
-
-.. note::
-
-    We might actually want to have just one ``call`` function that takes the name,
-    the arguments and an optional callback - if the callback is not set, it will
-    act like ``typedCall``, otherwise it will act like ``typedCallWithReturn``?
+    argument that is the return value. The ``callback`` argument is optional, if
+    set to ``undefined`` (the default), the return value will be discarded.
 
 .. cpp:function:: var getProperty(string name)
 
@@ -266,3 +244,26 @@ Exposing a new object on the session bus
 ````````````````````````````````````````
 
 TODO
+
+API Version History
+-------------------
+
+This section lists changes in the Nemo Mobile D-Bus QML Plugin API.
+
+Version 2.0
+```````````
+
+* Moved both ``BusType`` enums (in ``DBusInterface`` and ``DBusAdaptor``) to
+  a single enum in ``DBus``
+* Renamed ``destination`` property of ``DBusInterface`` to ``service``
+  (to align better with the naming in ``DBusAdaptor``)
+* Renamed ``busType`` property to ``bus`` for better readability
+* Merged ``typedCall`` and ``typedCallWithReturn`` into a single function,
+  ``typedCall`` that can handle an optional ``callback`` parameter
+* Merged ``emitSignal`` and ``emitSignalWithArguments`` into a single function,
+  ``emitSignal`` that can handle an optional ``arguments`` parameter
+
+Version 1.0
+```````````
+
+* Initial release (0.0.x release series), unstable API

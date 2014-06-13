@@ -43,6 +43,12 @@ public:
     DeclarativeDBusAdaptor10(QObject *parent = 0);
     ~DeclarativeDBusAdaptor10();
 
+    // Deprecated, newer versions have emitSignal with an optional arguments parameter
+    Q_INVOKABLE void emitSignalWithArguments(const QString &name, const QJSValue &arguments)
+    {
+        emitSignal(name, arguments);
+    }
+
     // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
     // (in QML, use DBus.SessionBus instead of DBusAdaptor.SessionBus)
     enum BusType {

@@ -71,10 +71,8 @@ public:
     void setSignalsEnabled(bool enabled);
 
     Q_INVOKABLE void call(const QString &method, const QJSValue &arguments);
-    Q_INVOKABLE void typedCall(const QString &method, const QJSValue &arguments);
-
-    Q_INVOKABLE void typedCallWithReturn(const QString &method, const QJSValue &arguments,
-                                         const QJSValue &callback);
+    Q_INVOKABLE void typedCall(const QString &method, const QJSValue &arguments,
+            const QJSValue &callback=QJSValue::UndefinedValue);
 
     Q_INVOKABLE QVariant getProperty(const QString &name);
 

@@ -359,21 +359,14 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
     return false;
 }
 
-void DeclarativeDBusAdaptor::emitSignal(const QString &name)
+void DeclarativeDBusAdaptor::emitSignal(const QString &name, const QJSValue &arguments)
 {
     QDBusMessage signal = QDBusMessage::createSignal(m_path, m_interface, name);
     QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
-    if (!conn.send(signal))
-        qmlInfo(this) << conn.lastError();
-}
-
-void DeclarativeDBusAdaptor::emitSignalWithArguments(
-        const QString &name, const QJSValue &arguments)
-{
-    QDBusMessage signal = QDBusMessage::createSignal(m_path, m_interface, name);
-    signal.setArguments(DeclarativeDBusInterface::argumentsFromScriptValue(arguments));
-    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
+    if (!arguments.isUndefined()) {
+        signal.setArguments(DeclarativeDBusInterface::argumentsFromScriptValue(arguments));
+    }
 
     if (!conn.send(signal))
         qmlInfo(this) << conn.lastError();

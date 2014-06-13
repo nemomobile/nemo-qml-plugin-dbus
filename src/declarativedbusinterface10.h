@@ -42,6 +42,13 @@ public:
     DeclarativeDBusInterface10(QObject *parent = 0);
     ~DeclarativeDBusInterface10();
 
+    // Deprecated, newer versions have typedCall with an optional callback parameters
+    Q_INVOKABLE void typedCallWithReturn(const QString &method, const QJSValue &arguments,
+            const QJSValue &callback)
+    {
+        typedCall(method, arguments, callback);
+    }
+
     // Deprecated (since version 1.0.0): Use DeclarativeDBus::BusType instead
     // (in QML, use DBus.SessionBus instead of DBusInterface.SessionBus)
     enum BusType {

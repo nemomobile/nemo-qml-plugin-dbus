@@ -323,30 +323,29 @@ QVariant DeclarativeDBusInterface::parse(const QDBusArgument &argument)
     }
 }
 
-void DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &arguments)
+void DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &arguments, const QJSValue &callback)
 {
     QDBusMessage message = constructMessage(m_service, m_path, m_interface, method, arguments);
-    if (message.type() == QDBusMessage::InvalidMessage)
+    if (message.type() == QDBusMessage::InvalidMessage) {
+        qmlInfo(this) << "Invalid message, cannot call method:" << method;
         return;
+    }
 
     QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
-    if (!conn.send(message))
-        qmlInfo(this) << conn.lastError();
-}
+    if (callback.isUndefined()) {
+        // Call without waiting for return value (callback is undefined)
+        if (!conn.send(message)) {
+            qmlInfo(this) << conn.lastError();
+        }
+        return;
+    }
 
-void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const QJSValue &arguments, const QJSValue &callback)
-{
+    // If we have a non-undefined callback, it must be callable
     if (!callback.isCallable()) {
         qmlInfo(this) << "Callback argument is not a function";
         return;
     }
-
-    QDBusMessage message = constructMessage(m_service, m_path, m_interface, method, arguments);
-    if (message.type() == QDBusMessage::InvalidMessage)
-        return;
-
-    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     QDBusPendingCall pendingCall = conn.asyncCall(message);
     QDBusPendingCallWatcher *watcher = new QDBusPendingCallWatcher(pendingCall);

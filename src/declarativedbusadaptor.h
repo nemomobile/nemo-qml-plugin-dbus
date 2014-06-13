@@ -71,8 +71,8 @@ public:
     QString introspect(const QString &path) const;
     bool handleMessage(const QDBusMessage &message, const QDBusConnection &connection);
 
-    Q_INVOKABLE void emitSignal(const QString &name);
-    Q_INVOKABLE void emitSignalWithArguments(const QString &name, const QJSValue &arguments);
+    Q_INVOKABLE void emitSignal(const QString &name,
+            const QJSValue &arguments=QJSValue::UndefinedValue);
 
 signals:
     void serviceChanged();

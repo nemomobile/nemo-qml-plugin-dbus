@@ -16,12 +16,18 @@ INSTALLS += qmldir
 
 SOURCES += \
     plugin.cpp \
+    declarativedbus.cpp \
     declarativedbusadaptor.cpp \
-    declarativedbusinterface.cpp
+    declarativedbusadaptor10.cpp \
+    declarativedbusinterface.cpp \
+    declarativedbusinterface10.cpp
 
 HEADERS += \
+    declarativedbus.h \
     declarativedbusadaptor.h \
-    declarativedbusinterface.h
+    declarativedbusadaptor10.h \
+    declarativedbusinterface.h \
+    declarativedbusinterface10.h
 
 MOC_DIR = $$PWD/.moc
 OBJECTS_DIR = $$PWD/.obj

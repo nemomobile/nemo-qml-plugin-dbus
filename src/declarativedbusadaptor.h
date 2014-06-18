@@ -33,6 +33,8 @@
 
 #include <QDBusVirtualObject>
 
+#include "declarativedbus.h"
+
 class DeclarativeDBusAdaptor : public QDBusVirtualObject, public QQmlParserStatus
 {
     Q_OBJECT
@@ -40,10 +42,9 @@ class DeclarativeDBusAdaptor : public QDBusVirtualObject, public QQmlParserStatu
     Q_PROPERTY(QString path READ path WRITE setPath NOTIFY pathChanged)
     Q_PROPERTY(QString iface READ interface WRITE setInterface NOTIFY interfaceChanged)
     Q_PROPERTY(QString xml READ xml WRITE setXml NOTIFY xmlChanged)
-    Q_PROPERTY(BusType busType READ busType WRITE setBusType NOTIFY busTypeChanged)
+    Q_PROPERTY(DeclarativeDBus::BusType bus READ bus WRITE setBus NOTIFY busChanged)
 
     Q_INTERFACES(QQmlParserStatus)
-    Q_ENUMS(BusType)
 
 public:
     DeclarativeDBusAdaptor(QObject *parent = 0);
@@ -61,13 +62,8 @@ public:
     QString xml() const;
     void setXml(const QString &xml);
 
-    enum BusType {
-        SystemBus,
-        SessionBus
-    };
-
-    BusType busType() const;
-    void setBusType(BusType busType);
+    DeclarativeDBus::BusType bus() const;
+    void setBus(DeclarativeDBus::BusType bus);
 
     void classBegin();
     void componentComplete();
@@ -75,22 +71,22 @@ public:
     QString introspect(const QString &path) const;
     bool handleMessage(const QDBusMessage &message, const QDBusConnection &connection);
 
-    Q_INVOKABLE void emitSignal(const QString &name);
-    Q_INVOKABLE void emitSignalWithArguments(const QString &name, const QJSValue &arguments);
+    Q_INVOKABLE void emitSignal(const QString &name,
+            const QJSValue &arguments=QJSValue::UndefinedValue);
 
 signals:
     void serviceChanged();
     void pathChanged();
     void interfaceChanged();
     void xmlChanged();
-    void busTypeChanged();
+    void busChanged();
 
 private:
     QString m_service;
     QString m_path;
     QString m_interface;
     QString m_xml;
-    BusType m_busType;
+    DeclarativeDBus::BusType m_bus;
 };
 
 #endif

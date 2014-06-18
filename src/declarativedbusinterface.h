@@ -33,23 +33,21 @@
 #include <QDBusArgument>
 #include <QJSValue>
 #include <QQmlParserStatus>
+#include <QUrl>
+#include <QDBusPendingCallWatcher>
+#include <QDBusMessage>
 
-
-class QUrl;
-class QDBusPendingCallWatcher;
-class QDBusMessage;
-QT_END_NAMESPACE
+#include "declarativedbus.h"
 
 class DeclarativeDBusInterface : public QObject, public QQmlParserStatus
 {
     Q_OBJECT
-    Q_PROPERTY(QString destination READ destination WRITE setDestination NOTIFY destinationChanged)
+
+    Q_PROPERTY(QString service READ service WRITE setService NOTIFY serviceChanged)
     Q_PROPERTY(QString path READ path WRITE setPath NOTIFY pathChanged)
     Q_PROPERTY(QString iface READ interface WRITE setInterface NOTIFY interfaceChanged)
-    Q_PROPERTY(BusType busType READ busType WRITE setBusType NOTIFY busTypeChanged)
+    Q_PROPERTY(DeclarativeDBus::BusType bus READ bus WRITE setBus NOTIFY busChanged)
     Q_PROPERTY(bool signalsEnabled READ signalsEnabled WRITE setSignalsEnabled NOTIFY signalsEnabledChanged)
-
-    Q_ENUMS(BusType)
 
     Q_INTERFACES(QQmlParserStatus)
 
@@ -57,8 +55,8 @@ public:
     DeclarativeDBusInterface(QObject *parent = 0);
     ~DeclarativeDBusInterface();
 
-    QString destination() const;
-    void setDestination(const QString &destination);
+    QString service() const;
+    void setService(const QString &service);
 
     QString path() const;
     void setPath(const QString &path);
@@ -66,24 +64,18 @@ public:
     QString interface() const;
     void setInterface(const QString &interface);
 
-    enum BusType {
-        SystemBus,
-        SessionBus
-    };
-
-    BusType busType() const;
-    void setBusType(BusType busType);
+    DeclarativeDBus::BusType bus() const;
+    void setBus(DeclarativeDBus::BusType bus);
 
     bool signalsEnabled() const;
     void setSignalsEnabled(bool enabled);
 
     Q_INVOKABLE void call(const QString &method, const QJSValue &arguments);
-    Q_INVOKABLE void typedCall(const QString &method, const QJSValue &arguments);
-
-    Q_INVOKABLE void typedCallWithReturn(const QString &method, const QJSValue &arguments,
-                                         const QJSValue &callback);
+    Q_INVOKABLE void typedCall(const QString &method, const QJSValue &arguments,
+            const QJSValue &callback=QJSValue::UndefinedValue);
 
     Q_INVOKABLE QVariant getProperty(const QString &name);
+    Q_INVOKABLE void setProperty(const QString &name, const QVariant &value);
 
     void classBegin();
     void componentComplete();
@@ -92,10 +84,10 @@ public:
     static QVariantList argumentsFromScriptValue(const QJSValue &arguments);
 
 signals:
-    void destinationChanged();
+    void serviceChanged();
     void pathChanged();
     void interfaceChanged();
-    void busTypeChanged();
+    void busChanged();
     void signalsEnabledChanged();
 
 private slots:
@@ -107,10 +99,10 @@ private:
     void disconnectSignalHandler();
     void connectSignalHandler();
 
-    QString m_destination;
+    QString m_service;
     QString m_path;
     QString m_interface;
-    BusType m_busType;
+    DeclarativeDBus::BusType m_bus;
     QMap<QDBusPendingCallWatcher *, QJSValue> m_pendingCalls;
     QMap<QString, QMetaMethod> m_signals;
     bool m_componentCompleted;

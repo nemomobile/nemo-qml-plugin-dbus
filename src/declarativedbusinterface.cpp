@@ -40,7 +40,7 @@
 #include <QXmlStreamReader>
 
 DeclarativeDBusInterface::DeclarativeDBusInterface(QObject *parent)
-:   QObject(parent), m_busType(SessionBus), m_componentCompleted(false), m_signalsEnabled(false)
+:   QObject(parent), m_bus(DeclarativeDBus::SessionBus), m_componentCompleted(false), m_signalsEnabled(false)
 {
 }
 
@@ -50,18 +50,18 @@ DeclarativeDBusInterface::~DeclarativeDBusInterface()
         delete watcher;
 }
 
-QString DeclarativeDBusInterface::destination() const
+QString DeclarativeDBusInterface::service() const
 {
-    return m_destination;
+    return m_service;
 }
 
-void DeclarativeDBusInterface::setDestination(const QString &destination)
+void DeclarativeDBusInterface::setService(const QString &service)
 {
-    if (m_destination != destination) {
+    if (m_service != service) {
         disconnectSignalHandler();
 
-        m_destination = destination;
-        emit destinationChanged();
+        m_service = service;
+        emit serviceChanged();
 
         connectSignalHandler();
     }
@@ -101,18 +101,18 @@ void DeclarativeDBusInterface::setInterface(const QString &interface)
     }
 }
 
-DeclarativeDBusInterface::BusType DeclarativeDBusInterface::busType() const
+DeclarativeDBus::BusType DeclarativeDBusInterface::bus() const
 {
-    return m_busType;
+    return m_bus;
 }
 
-void DeclarativeDBusInterface::setBusType(DeclarativeDBusInterface::BusType busType)
+void DeclarativeDBusInterface::setBus(DeclarativeDBus::BusType bus)
 {
-    if (m_busType != busType) {
+    if (m_bus != bus) {
         disconnectSignalHandler();
 
-        m_busType = busType;
-        emit busTypeChanged();
+        m_bus = bus;
+        emit busChanged();
 
         connectSignalHandler();
     }
@@ -161,14 +161,13 @@ void DeclarativeDBusInterface::call(const QString &method, const QJSValue &argum
     QVariantList dbusArguments = argumentsFromScriptValue(arguments);
 
     QDBusMessage message = QDBusMessage::createMethodCall(
-                m_destination,
+                m_service,
                 m_path,
                 m_interface,
                 method);
     message.setArguments(dbusArguments);
 
-    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
-                                                   : QDBusConnection::systemBus();
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     if (!conn.send(message))
         qmlInfo(this) << conn.lastError();
@@ -238,7 +237,7 @@ QVariant marshallDBusArgument(const QJSValue &arg)
     return QVariant();
 }
 
-QDBusMessage constructMessage(const QString &destination, const QString &path,
+QDBusMessage constructMessage(const QString &service, const QString &path,
                               const QString &interface, const QString &method,
                               const QJSValue &arguments)
 {
@@ -262,7 +261,7 @@ QDBusMessage constructMessage(const QString &destination, const QString &path,
         dbusArguments.append(value);
     }
 
-    QDBusMessage message = QDBusMessage::createMethodCall(destination, path, interface, method);
+    QDBusMessage message = QDBusMessage::createMethodCall(service, path, interface, method);
     message.setArguments(dbusArguments);
 
     return message;
@@ -324,32 +323,29 @@ QVariant DeclarativeDBusInterface::parse(const QDBusArgument &argument)
     }
 }
 
-void DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &arguments)
+void DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &arguments, const QJSValue &callback)
 {
-    QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
-    if (message.type() == QDBusMessage::InvalidMessage)
+    QDBusMessage message = constructMessage(m_service, m_path, m_interface, method, arguments);
+    if (message.type() == QDBusMessage::InvalidMessage) {
+        qmlInfo(this) << "Invalid message, cannot call method:" << method;
         return;
+    }
 
-    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
-                                                   : QDBusConnection::systemBus();
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
-    if (!conn.send(message))
-        qmlInfo(this) << conn.lastError();
-}
+    if (callback.isUndefined()) {
+        // Call without waiting for return value (callback is undefined)
+        if (!conn.send(message)) {
+            qmlInfo(this) << conn.lastError();
+        }
+        return;
+    }
 
-void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const QJSValue &arguments, const QJSValue &callback)
-{
+    // If we have a non-undefined callback, it must be callable
     if (!callback.isCallable()) {
         qmlInfo(this) << "Callback argument is not a function";
         return;
     }
-
-    QDBusMessage message = constructMessage(m_destination, m_path, m_interface, method, arguments);
-    if (message.type() == QDBusMessage::InvalidMessage)
-        return;
-
-    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
-                                                   : QDBusConnection::systemBus();
 
     QDBusPendingCall pendingCall = conn.asyncCall(message);
     QDBusPendingCallWatcher *watcher = new QDBusPendingCallWatcher(pendingCall);
@@ -361,7 +357,7 @@ void DeclarativeDBusInterface::typedCallWithReturn(const QString &method, const 
 QVariant DeclarativeDBusInterface::getProperty(const QString &name)
 {
     QDBusMessage message =
-        QDBusMessage::createMethodCall(m_destination, m_path,
+        QDBusMessage::createMethodCall(m_service, m_path,
                                        QLatin1String("org.freedesktop.DBus.Properties"),
                                        QLatin1String("Get"));
 
@@ -371,8 +367,7 @@ QVariant DeclarativeDBusInterface::getProperty(const QString &name)
 
     message.setArguments(args);
 
-    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
-                                                   : QDBusConnection::systemBus();
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     QDBusMessage reply = conn.call(message);
     if (reply.type() == QDBusMessage::ErrorMessage)
@@ -385,6 +380,22 @@ QVariant DeclarativeDBusInterface::getProperty(const QString &name)
         return v.value<QDBusVariant>().variant();
     else
         return v;
+}
+
+void DeclarativeDBusInterface::setProperty(const QString &name, const QVariant &value)
+{
+    QDBusMessage message = QDBusMessage::createMethodCall(m_service, m_path,
+            QLatin1String("org.freedesktop.DBus.Properties"),
+            QLatin1String("Set"));
+
+    QVariantList args;
+    args.append(m_interface);
+    args.append(name);
+    args.append(value);
+
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
+    if (!conn.send(message))
+        qmlInfo(this) << conn.lastError();
 }
 
 void DeclarativeDBusInterface::classBegin()
@@ -480,8 +491,7 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
     if (dbusSignals.isEmpty())
         return;
 
-    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
-                                                   : QDBusConnection::systemBus();
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     // Skip over signals defined in DeclarativeDBusInterface and its parent classes
     // so only signals defined in qml are connected to.
@@ -490,12 +500,25 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
 
         QString methodName = method.name();
 
-        // Connect QML signals with the prefix 'rc' followed by an upper-case letter to
-        // DBus signals of the same name minus the prefix.
+        // API version 1.0 name mangling:
+        // Connect QML signals with the prefix 'rc' followed by an upper-case
+        // letter to DBus signals of the same name minus the prefix.
         if (methodName.length() > 2
                 && methodName.startsWith(QStringLiteral("rc"))
                 && methodName.at(2).isUpper()) {
             methodName.remove(0, 2);
+        } else if (methodName.length() >= 2) {
+            // API version 2.0 name mangling:
+            //  "methodName" -> "MethodName" (if a corresponding signal exists)
+            QString methodNameUpperCase = methodName.at(0).toUpper() +
+                methodName.mid(1);
+
+            // Only do name mangling if the lower case version does not exist,
+            // and the upper case version does exist.
+            if (!dbusSignals.contains(methodName) &&
+                 dbusSignals.contains(methodNameUpperCase)) {
+                methodName = methodNameUpperCase;
+            }
         }
 
         if (!dbusSignals.contains(methodName))
@@ -504,7 +527,7 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
         dbusSignals.removeOne(methodName);
 
         m_signals.insert(methodName, method);
-        conn.connect(m_destination, m_path, m_interface, methodName,
+        conn.connect(m_service, m_path, m_interface, methodName,
                      this, SLOT(signalHandler(QDBusMessage)));
 
         if (dbusSignals.isEmpty())
@@ -517,11 +540,10 @@ void DeclarativeDBusInterface::disconnectSignalHandler()
     if (m_signals.isEmpty())
         return;
 
-    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
-                                                   : QDBusConnection::systemBus();
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     foreach (const QString &signal, m_signals.keys()) {
-        conn.disconnect(m_destination, m_path, m_interface, signal,
+        conn.disconnect(m_service, m_path, m_interface, signal,
                         this, SLOT(signalHandler(QDBusMessage)));
     }
 
@@ -534,15 +556,14 @@ void DeclarativeDBusInterface::connectSignalHandler()
         return;
 
     QDBusMessage message =
-        QDBusMessage::createMethodCall(m_destination, m_path,
+        QDBusMessage::createMethodCall(m_service, m_path,
                                        QLatin1String("org.freedesktop.DBus.Introspectable"),
                                        QLatin1String("Introspect"));
 
     if (message.type() == QDBusMessage::InvalidMessage)
         return;
 
-    QDBusConnection conn = m_busType == SessionBus ? QDBusConnection::sessionBus()
-                                                   : QDBusConnection::systemBus();
+    QDBusConnection conn = DeclarativeDBus::connection(m_bus);
 
     if (!conn.callWithCallback(message, this, SLOT(connectSignalHandlerCallback(QString))))
         qmlInfo(this) << "Failed to introspect interface" << conn.lastError();

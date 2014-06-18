@@ -1,6 +1,6 @@
 Name:       nemo-qml-plugin-dbus-qt5
 Summary:    DBus plugin for Nemo Mobile
-Version:    0.0.0
+Version:    2.0.0
 Release:    1
 Group:      System/Libraries
 License:    LGPLv2.1

@@ -147,33 +147,13 @@ same name.
         }
     }
 
-In case a D-Bus object has two signals that only differ in the case of their
-first letter (e.g. ``UpdateAll`` and ``updateAll``), you can prefix the handler
-function with ``rc`` (*remote call*) to write a handler for the uppercase function
-(the lower case function in this case will handle the lower case signal):
+.. note::
 
-.. code::
-
-    DBusInterface {
-        ...
-        signalsEnabled: true
-
-        // Assuming the target object has two signals,
-        //   1. UpdateAll (with uppercase first character)
-        //   2. updateAll (with lowercase first character)
-
-        function rcUpdateAll() {
-            // Will handle the "UpdateAll" signal
-        }
-
-        function updateAll() {
-            // Will handle the "updateAll" signal
-        }
-    }
-
-This name mangling is necessary, because in D-Bus, signal names (as well as function
-names) usually start with an uppercase letter, whereas in QML, function names on
-objects must start with lowercase letters.
+    In D-Bus, signal names usually start with an uppercase letter, but in
+    QML, function names on objects must start with lowercase letters. The
+    plugin connects uppercase signal names to functions where the first
+    letter is lowercase (the D-Bus signal ``UpdateOne`` is handled by the
+    QML/JavaScript function ``updateOne``).
 
 Functions
 ^^^^^^^^^

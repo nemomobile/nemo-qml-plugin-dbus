@@ -338,8 +338,8 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
                             arguments[7],
                             arguments[8],
                             arguments[9]);
-                if (retVal.isValid()) {
-                    QDBusMessage reply = message.createReply(retVal);
+                if (success) {
+                    QDBusMessage reply = retVal.isValid() ? message.createReply(retVal) : message.createReply();
                     QDBusConnection conn = DeclarativeDBus::connection(m_bus);
                     conn.send(reply);
                 }

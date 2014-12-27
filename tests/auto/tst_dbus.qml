@@ -34,7 +34,7 @@
 
 import QtTest 1.0
 import QtQuick 2.0
-import org.nemomobile.dbus 1.0
+import org.nemomobile.dbus 2.0
 
 Item {
     width: 500; height: 500
@@ -116,7 +116,7 @@ Item {
     DBusInterface {
         id: dbusInterface
 
-        destination: "org.nemomobile.dbus.test"
+        service: "org.nemomobile.dbus.test"
         iface: "org.nemomobile.dbus.test.Interface"
         path: "/org/nemomobile/dbus/test"
     }

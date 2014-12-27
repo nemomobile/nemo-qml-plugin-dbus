@@ -250,7 +250,7 @@ to be called when the function result is available:
         Component.onCompleted: {
             // Call the "get_profile" method without arguments, and
             // when it returns, call the passed-in callback method
-            profiled.typedCallWithReturn('get_profile', [], function (result) {
+            profiled.typedCall('get_profile', [], function (result) {
                 // This will be called when the result is available
                 console.log('Got profile: ' + result);
             });

@@ -376,10 +376,15 @@ QVariant DeclarativeDBusInterface::getProperty(const QString &name)
         return QVariant();
 
     QVariant v = reply.arguments().first();
-    if (v.userType() == qMetaTypeId<QDBusVariant>())
-        return v.value<QDBusVariant>().variant();
-    else
+    if (v.userType() == qMetaTypeId<QDBusVariant>()) {
+        QVariant arg = v.value<QDBusVariant>().variant();
+        if (arg.userType() == qMetaTypeId<QDBusArgument>())
+            return parse(arg.value<QDBusArgument>());
+        else
+            return arg;
+    } else {
         return v;
+    }
 }
 
 void DeclarativeDBusInterface::setProperty(const QString &name, const QVariant &value)

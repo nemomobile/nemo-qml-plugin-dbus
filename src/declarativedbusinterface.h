@@ -100,6 +100,7 @@ private slots:
 private:
     void disconnectSignalHandler();
     void connectSignalHandler();
+    QVariant unwind(const QVariant &val, int depth = 0);
 
     QString m_service;
     QString m_path;

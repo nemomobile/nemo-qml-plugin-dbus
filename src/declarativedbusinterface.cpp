@@ -215,6 +215,7 @@ QVariant marshallDBusArgument(const QJSValue &arg)
                 case 's': return QVariant(value.toString());
                 case 'o': return QVariant::fromValue(QDBusObjectPath(value.toString()));
                 case 'g': return QVariant::fromValue(QDBusSignature(value.toString()));
+                case 'z': return QVariant::fromValue(QDBusVariant(value.toVariant()));
                 default: break;
             }
         } else if (t.length() == 2 && (t.at(0).toLatin1() == 'a')) {

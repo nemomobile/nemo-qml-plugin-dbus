@@ -431,7 +431,10 @@ void DeclarativeDBusInterface::pendingCallFinished(QDBusPendingCallWatcher *watc
         qmlInfo(this) << reply.error();
         QJSValue errorCallback = callbacks.second;
         if (errorCallback.isCallable()) {
-            errorCallback.call();
+            QJSValue result = errorCallback.call();
+            if (result.isError()) {
+                qmlInfo(this) << "Error executing error handling callback";
+            }
         }
         return;
     }
@@ -453,7 +456,10 @@ void DeclarativeDBusInterface::pendingCallFinished(QDBusPendingCallWatcher *watc
         callbackArguments << callback.engine()->toScriptValue<QVariant>(argument);
     }
 
-    callback.call(callbackArguments);
+    QJSValue result = callback.call(callbackArguments);
+    if (result.isError()) {
+        qmlInfo(this) << "Error executing callback";
+    }
 }
 
 void DeclarativeDBusInterface::signalHandler(const QDBusMessage &message)

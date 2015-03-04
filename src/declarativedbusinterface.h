@@ -36,6 +36,7 @@
 #include <QUrl>
 #include <QDBusPendingCallWatcher>
 #include <QDBusMessage>
+#include <QPair>
 
 #include "declarativedbus.h"
 
@@ -72,7 +73,8 @@ public:
 
     Q_INVOKABLE void call(const QString &method, const QJSValue &arguments);
     Q_INVOKABLE void typedCall(const QString &method, const QJSValue &arguments,
-            const QJSValue &callback=QJSValue::UndefinedValue);
+            const QJSValue &callback=QJSValue::UndefinedValue,
+            const QJSValue &errorCallback=QJSValue::UndefinedValue);
 
     Q_INVOKABLE QVariant getProperty(const QString &name);
     Q_INVOKABLE void setProperty(const QString &name, const QVariant &value);
@@ -103,7 +105,7 @@ private:
     QString m_path;
     QString m_interface;
     DeclarativeDBus::BusType m_bus;
-    QMap<QDBusPendingCallWatcher *, QJSValue> m_pendingCalls;
+    QMap<QDBusPendingCallWatcher *, QPair<QJSValue, QJSValue> > m_pendingCalls; // pair: success and error callback
     QMap<QString, QMetaMethod> m_signals;
     bool m_componentCompleted;
     bool m_signalsEnabled;

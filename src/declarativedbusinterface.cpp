@@ -323,7 +323,8 @@ QVariant DeclarativeDBusInterface::parse(const QDBusArgument &argument)
     }
 }
 
-void DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &arguments, const QJSValue &callback)
+void DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &arguments, const QJSValue &callback,
+                                         const QJSValue &errorCallback)
 {
     QDBusMessage message = constructMessage(m_service, m_path, m_interface, method, arguments);
     if (message.type() == QDBusMessage::InvalidMessage) {
@@ -347,11 +348,16 @@ void DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &
         return;
     }
 
+    if (!errorCallback.isUndefined() && !errorCallback.isCallable()) {
+        qmlInfo(this) << "Error callback argument is not a function or undefined";
+        return;
+    }
+
     QDBusPendingCall pendingCall = conn.asyncCall(message);
     QDBusPendingCallWatcher *watcher = new QDBusPendingCallWatcher(pendingCall);
     connect(watcher, SIGNAL(finished(QDBusPendingCallWatcher*)),
             this, SLOT(pendingCallFinished(QDBusPendingCallWatcher*)));
-    m_pendingCalls.insert(watcher, callback);
+    m_pendingCalls.insert(watcher, qMakePair(callback, errorCallback));
 }
 
 QVariant DeclarativeDBusInterface::getProperty(const QString &name)
@@ -415,19 +421,24 @@ void DeclarativeDBusInterface::componentComplete()
 
 void DeclarativeDBusInterface::pendingCallFinished(QDBusPendingCallWatcher *watcher)
 {
-    QJSValue callback = m_pendingCalls.take(watcher);
+    QPair<QJSValue, QJSValue> callbacks = m_pendingCalls.take(watcher);
 
     watcher->deleteLater();
-
-    if (!callback.isCallable())
-        return;
 
     QDBusPendingReply<> reply = *watcher;
 
     if (reply.isError()) {
         qmlInfo(this) << reply.error();
+        QJSValue errorCallback = callbacks.second;
+        if (errorCallback.isCallable()) {
+            errorCallback.call();
+        }
         return;
     }
+
+    QJSValue callback = callbacks.first;
+    if (!callback.isCallable())
+        return;
 
     QDBusMessage message = reply.reply();
 

@@ -101,6 +101,12 @@ private:
     void disconnectSignalHandler();
     void connectSignalHandler();
     QVariant unwind(const QVariant &val, int depth = 0);
+    bool marshallDBusArgument(QDBusMessage &msg, const QJSValue &arg);
+    QDBusMessage constructMessage(const QString &service,
+                                  const QString &path,
+                                  const QString &interface,
+                                  const QString &method,
+                                  const QJSValue &arguments);
 
     QString m_service;
     QString m_path;

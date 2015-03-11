@@ -21,15 +21,18 @@
 ** Lesser General Public License for more details.
 **
 ******************************************************************************/
+
+import QtTest 1.0
 import QtQuick 2.0
-import Sailfish.Silica 1.0
-import org.nemomobile.dbus 2.0 as NemoDBus
-ApplicationWindow {
+import org.nemomobile.dbus 2.0
+
+TestCase {
   property int failCount : 0
   property int passCount : 0
   readonly property string ansiGreen : "\x1b[32m"
   readonly property string ansiRed   : "\x1b[31m"
   readonly property string ansiReset : "\x1b[0m"
+  property bool finished
   function pass(title, have) {
     passCount += 1 ; console.log(ansiGreen+title+ansiReset+": got <"+have+">")
   }
@@ -39,11 +42,11 @@ ApplicationWindow {
   function finish() {
     console.log(ansiGreen+"all tests executed; quitting"+ansiReset)
     console.log("passed:", passCount, "failed:", failCount)
-    Qt.quit()
+    finished = true
   }
   function timeout() {
     console.warn(ansiRed+"tests did not finish in time; quitting"+ansiReset)
-    Qt.quit()
+    finished = true
   }
   function repr(args, cb) {
     if( !testsrv.typedCall("repr",args, cb) ) { cb('ERR') }
@@ -232,7 +235,7 @@ ApplicationWindow {
       signalBeg()
     }
   }
-  NemoDBus.DBusInterface {
+  DBusInterface {
     id:              testsrv
     service:         'org.nemomobile.dbustestd'
     path:            '/'
@@ -242,20 +245,21 @@ ApplicationWindow {
       signalData = arg
     }
   }
-  Timer {
-    id: initDelay
-    interval: 100
-    onTriggered: methodBeg()
-  }
+
   Timer {
     id: exitDelay
     interval: 10000
     running: true
     onTriggered: timeout()
   }
-  initialPage: Component {
-    Page {
-      Component.onCompleted: initDelay.start()
-    }
+
+  function test_typedCall() {
+      methodBeg()
+
+      while (!finished) {
+          wait(500)
+      }
+
+      compare(failCount, 0)
   }
 }

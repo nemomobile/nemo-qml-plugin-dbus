@@ -29,65 +29,78 @@ import org.nemomobile.dbus 2.0
 TestCase {
   property int failCount : 0
   property int passCount : 0
-  readonly property string ansiGreen : "\x1b[32m"
-  readonly property string ansiRed   : "\x1b[31m"
-  readonly property string ansiReset : "\x1b[0m"
   property bool finished
+
   function pass(title, have) {
-    passCount += 1 ; console.log(ansiGreen+title+ansiReset+": got <"+have+">")
+    passCount += 1
+    console.log(title+": got <"+have+">")
   }
+
   function fail(title, have, want) {
-    failCount += 1 ; console.warn(ansiRed+title+ansiReset+": got <"+have+"> wanted <"+want+">")
+    failCount += 1
+    console.warn(title+": got <"+have+"> wanted <"+want+">")
   }
+
   function finish() {
-    console.log(ansiGreen+"all tests executed; quitting"+ansiReset)
     console.log("passed:", passCount, "failed:", failCount)
     finished = true
   }
+
   function timeout() {
-    console.warn(ansiRed+"tests did not finish in time; quitting"+ansiReset)
+    console.warn("tests did not finish in time; quitting")
     finished = true
   }
+
   function repr(args, cb) {
-    if( !testsrv.typedCall("repr",args, cb) ) { cb('ERR') }
+    if (!testsrv.typedCall("repr",args, cb)) {
+        cb('ERR')
+    }
   }
+
   function echo(args, cb) {
-    if( !testsrv.typedCall("echo",args, cb) ) { cb('ERR') }
+    if (!testsrv.typedCall("echo",args, cb)) { cb('ERR') }
   }
+
   function ping(args, cb) {
-    if( !testsrv.typedCall("ping",args, cb) ) { cb('ERR') }
+    if (!testsrv.typedCall("ping",args, cb)) {
+        cb('ERR')
+    }
   }
+
   function seod(x) {
-    if( x instanceof RegExp ) {
+    if (x instanceof RegExp) {
       return x
     }
-    if( x instanceof Array ) {
+    if (x instanceof Array) {
       return JSON.stringify(x) + " (json)"
     }
-    if( typeof x == "object" ) {
+    if (typeof x == "object") {
       var json = JSON.stringify(x)
-      if( json != '{}' ) {
+      if (json != '{}') {
         return json + " (json)"
       }
     }
     return x
   }
+
   function eq(have, want) {
-    if( want instanceof RegExp ) {
+    if (want instanceof RegExp) {
       return want.test(have)
     }
     return have === want
   }
+
   function expect(title, have, want) {
     have = seod(have)
     want = seod(want)
-    if( eq(have, want) ) {
+    if (eq(have, want)) {
       pass(title,have)
     }
     else {
       fail(title,have,want)
     }
   }
+
   property var signalData : ''
   property var signalTodo : [
     ping, {type:'y', value:255},                "ping: byte",
@@ -107,14 +120,16 @@ TestCase {
     ping, {type:'s', value:'COMPLEX3'},         "ping: complex3",
     ping, {type:'s', value:'COMPLEX4'},         "ping: complex4",
   ]
+
   function signalEnd(res) {
     var desc = signalTodo.shift()
     expect(desc, signalData, res)
-    signalBeg();
+    signalBeg()
   }
+
   function signalBeg() {
     signalData = ''
-    if( signalTodo.length ) {
+    if (signalTodo.length) {
       var func = signalTodo.shift()
       var type = signalTodo.shift()
       func(type, signalEnd)
@@ -123,6 +138,7 @@ TestCase {
       finish()
     }
   }
+
   property var methodTodo : [
     repr, {type:'b',value:false},             "repr: boolean",               'boolean:false',
     echo, {type:'b',value:false},             "echo: boolean",               false,
@@ -219,14 +235,16 @@ TestCase {
     repr, {type:'s',value:'COMPLEX4'},        "repr: complex4",              'struct { byte:255 boolean:true int16:32767 int32:2147483647 int64:9223372036854775807 uint16:65535 uint32:4294967295 uint64:18446744073709551615 double:3.75 string:"string" objpath:"/obj/path" signature:"sointu" }',
     echo, {type:'s',value:'COMPLEX4'},        "echo: complex4",              [255,true,32767,2147483647,9223372036854775807,65535,4294967295,18446744073709551615,3.75,"string","/obj/path","sointu"],
   ]
+
   function methodEnd(res) {
     var desc = methodTodo.shift()
     var data = methodTodo.shift()
     expect(desc, res, data)
-    methodBeg();
+    methodBeg()
   }
+
   function methodBeg() {
-    if( methodTodo.length ) {
+    if (methodTodo.length) {
       var func = methodTodo.shift()
       var type = methodTodo.shift()
       func(type, methodEnd)
@@ -235,6 +253,17 @@ TestCase {
       signalBeg()
     }
   }
+
+  function test_typedCall() {
+      methodBeg()
+
+      while (!finished) {
+          wait(500)
+      }
+
+      compare(failCount, 0)
+  }
+
   DBusInterface {
     id:              testsrv
     service:         'org.nemomobile.dbustestd'
@@ -251,15 +280,5 @@ TestCase {
     interval: 10000
     running: true
     onTriggered: timeout()
-  }
-
-  function test_typedCall() {
-      methodBeg()
-
-      while (!finished) {
-          wait(500)
-      }
-
-      compare(failCount, 0)
   }
 }

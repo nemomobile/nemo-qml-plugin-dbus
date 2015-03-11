@@ -1,6 +1,11 @@
-TEMPLATE = subdirs
+TEMPLATE = aux
 
-target.files = auto/*
-target.path = /opt/tests/nemo-qml-plugins/dbus/auto
+autotest.files = auto/*.qml
+autotest.path = /opt/tests/nemo-qml-plugins-qt5/dbus/auto
 
-INSTALLS += target
+OTHER_FILES += \
+    auto/*.qml \
+    dbustestd/* \
+    dbustestd/dbus/*.service
+
+INSTALLS += autotest

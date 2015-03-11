@@ -4,7 +4,7 @@
 
 VERS       ?= 0.0.0
 ROOT       ?= /tmp/nemo-qml-plugin-dbus
-PLUGIN_DIR ?= /opt/tests/nemo-qml-plugins/dbus/
+PLUGIN_DIR ?= /opt/tests/nemo-qml-plugins-qt5/dbus/
 DBUS_DIR   ?= /usr/share/dbus-1
 
 # ----------------------------------------------------------------------------
@@ -85,9 +85,6 @@ dbustestd : dbustestd.o
 install::
 	install -m755 -d $(ROOT)$(PLUGIN_DIR)/bin
 	install -m755 dbustestd $(ROOT)$(PLUGIN_DIR)/bin/
-
-	install -m755 -d $(ROOT)$(PLUGIN_DIR)/manual
-	install -m755 tst_dbus_interface.qml $(ROOT)$(PLUGIN_DIR)/manual/
 
 	install -m755 -d $(ROOT)$(DBUS_DIR)/services/
 	install -m755 dbus/org.nemomobile.dbustestd.service $(ROOT)$(DBUS_DIR)/services/

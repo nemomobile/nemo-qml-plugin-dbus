@@ -404,6 +404,7 @@ void DeclarativeDBusInterface::setProperty(const QString &name, const QVariant &
     args.append(m_interface);
     args.append(name);
     args.append(value);
+    message.setArguments(args);
 
     QDBusConnection conn = DeclarativeDBus::connection(m_bus);
     if (!conn.send(message))

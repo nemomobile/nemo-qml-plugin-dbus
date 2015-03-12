@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=org.nemomobile.dbustestd
-Exec=/opt/tests/nemo-qml-plugins/dbus/bin/dbustestd

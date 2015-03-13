@@ -19,6 +19,9 @@ Group:      System/Libraries
 Requires:   %{name} = %{version}-%{release}
 Requires:   qt5-qtdeclarative-import-qttest
 Requires:   qt5-qtdeclarative-devel-tools
+BuildRequires:  pkgconfig(glib-2.0)
+BuildRequires:  pkgconfig(dbus-1)
+BuildRequires:  pkgconfig(dbus-glib-1)
 
 %description tests
 %{summary}.
@@ -27,18 +30,25 @@ Requires:   qt5-qtdeclarative-devel-tools
 %setup -q -n %{name}-%{version}
 
 %build
-%qmake5 
+%qmake5
 make %{?jobs:-j%jobs}
+make -C tests/dbustestd %{?jobs:-j%jobs}
 
 %install
 rm -rf %{buildroot}
 %qmake5_install
+make -C tests/dbustestd install ROOT=%{buildroot} VERS=%{version}
 
 %files
 %defattr(-,root,root,-)
+%dir %{_libdir}/qt5/qml/org/nemomobile/dbus
+%dir %{_libdir}/qt5/qml/org/nemomobile/dbus/qmldir
 %{_libdir}/qt5/qml/org/nemomobile/dbus/libnemodbus.so
 %{_libdir}/qt5/qml/org/nemomobile/dbus/qmldir
 
 %files tests
 %defattr(-,root,root,-)
-/opt/tests/nemo-qml-plugins/dbus/*
+%dir /opt/tests/nemo-qml-plugins-qt5/dbus
+%dir /usr/share/dbus-1/services
+/opt/tests/nemo-qml-plugins-qt5/dbus/*
+/usr/share/dbus-1/services/org.nemomobile.dbustestd.service

@@ -41,6 +41,10 @@
 #include <QUrl>
 #include <QXmlStreamReader>
 
+namespace {
+const QLatin1String PropertyInterface("org.freedesktop.DBus.Properties");
+}
+
 DeclarativeDBusInterface::DeclarativeDBusInterface(QObject *parent)
 :   QObject(parent), m_bus(DeclarativeDBus::SessionBus), m_componentCompleted(false), m_signalsEnabled(false)
 {
@@ -533,7 +537,7 @@ QVariant DeclarativeDBusInterface::getProperty(const QString &name)
 {
     QDBusMessage message =
         QDBusMessage::createMethodCall(m_service, m_path,
-                                       QLatin1String("org.freedesktop.DBus.Properties"),
+                                       PropertyInterface,
                                        QLatin1String("Get"));
 
     QVariantList args;
@@ -556,8 +560,8 @@ QVariant DeclarativeDBusInterface::getProperty(const QString &name)
 void DeclarativeDBusInterface::setProperty(const QString &name, const QVariant &value)
 {
     QDBusMessage message = QDBusMessage::createMethodCall(m_service, m_path,
-            QLatin1String("org.freedesktop.DBus.Properties"),
-            QLatin1String("Set"));
+                                                          PropertyInterface,
+                                                          QLatin1String("Set"));
 
     QVariantList args;
     args.append(m_interface);
@@ -768,6 +772,7 @@ void DeclarativeDBusInterface::signalHandler(const QDBusMessage &message)
 void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &introspectionData)
 {
     QStringList dbusSignals;
+    bool connectPropertyInterface = false;
 
     QXmlStreamReader xml(introspectionData);
     while (!xml.atEnd()) {
@@ -777,8 +782,17 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
         if (xml.name() == QLatin1String("node"))
             continue;
 
-        if (xml.name() != QLatin1String("interface") ||
-            xml.attributes().value(QLatin1String("name")) != m_interface) {
+        bool skip = false;
+        if (xml.name() != QLatin1String("interface")) {
+            skip = true;
+        } else if (xml.attributes().value(QLatin1String("name")) == PropertyInterface) {
+            connectPropertyInterface = true;
+            skip = true;
+        } else if (xml.attributes().value(QLatin1String("name")) != m_interface) {
+            skip = true;
+        }
+
+        if (skip) {
             xml.skipCurrentElement();
             continue;
         }
@@ -794,7 +808,7 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
         }
     }
 
-    if (dbusSignals.isEmpty())
+    if (dbusSignals.isEmpty() && !connectPropertyInterface)
         return;
 
     QDBusConnection conn = DeclarativeDBus::connection(m_bus);
@@ -839,6 +853,20 @@ void DeclarativeDBusInterface::connectSignalHandlerCallback(const QString &intro
         if (dbusSignals.isEmpty())
             break;
     }
+
+    if (connectPropertyInterface) {
+        bool success = conn.connect(m_service, m_path, PropertyInterface, QLatin1String("PropertiesChanged"),
+                                    "sa{sv}as", this, SLOT(notifyPropertyChange()));
+        if (!success) {
+            qmlInfo(this) << "Failed to connect to DBus property interface signaling, service: "
+                          << m_service << " path: " << m_path;
+        }
+    }
+}
+
+void DeclarativeDBusInterface::notifyPropertyChange()
+{
+    emit propertiesChanged();
 }
 
 void DeclarativeDBusInterface::disconnectSignalHandler()

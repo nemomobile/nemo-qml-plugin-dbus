@@ -91,11 +91,13 @@ signals:
     void interfaceChanged();
     void busChanged();
     void signalsEnabledChanged();
+    void propertiesChanged();
 
 private slots:
     void pendingCallFinished(QDBusPendingCallWatcher *watcher);
     void signalHandler(const QDBusMessage &message);
     void connectSignalHandlerCallback(const QString &introspectionData);
+    void notifyPropertyChange();
 
 private:
     void disconnectSignalHandler();

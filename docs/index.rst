@@ -120,8 +120,18 @@ Properties
 Signals
 ^^^^^^^
 
-The ``DBusInterface`` object does not have any signals by itself. However,
-if :cpp:member:`signalsEnabled` is set to ``true``, signals of the
+.. cpp:member:: propertiesChanged
+
+    Emitted when properties of the D-Bus object have changed (only if the D-Bus object
+    does emit signals when properties change). Right now, this does not tell which
+    properties have changed and to which values.
+
+.. versionadded:: 2.0.8
+
+Handling D-Bus Signals
+^^^^^^^^^^^^^^^^^^^^^^
+
+If :cpp:member:`signalsEnabled` is set to ``true``, signals of the
 destination object will be connected to functions on the object that have the
 same name.
 

@@ -1,0 +1,82 @@
+Examples
+========
+
+Calling a function on a session bus object
+``````````````````````````````````````````
+
+This code snippet talks to the profile daemon and sets the current profile to silent:
+
+.. code::
+
+    import QtQuick 2.0
+    import org.nemomobile.dbus 2.0
+
+    Item {
+        DBusInterface {
+            id: profiled
+
+            service: 'com.nokia.profiled'
+            iface: 'com.nokia.profiled'
+            path: '/com/nokia/profiled'
+        }
+
+        Component.onCompleted: {
+            // Call the "set_profile" method here
+            profiled.call('set_profile', ['silent']);
+        }
+    }
+
+Calling a function and getting its return value
+```````````````````````````````````````````````
+
+Because function calls are asynchronous, we need to provide a callback
+to be called when the function result is available:
+
+.. code::
+
+    import QtQuick 2.0
+    import org.nemomobile.dbus 2.0
+
+    Item {
+        DBusInterface {
+            id: profiled
+
+            service: 'com.nokia.profiled'
+            iface: 'com.nokia.profiled'
+            path: '/com/nokia/profiled'
+        }
+
+        Component.onCompleted: {
+            // Call the "get_profile" method without arguments, and
+            // when it returns, call the passed-in callback method
+            profiled.typedCall('get_profile', [], function (result) {
+                // This will be called when the result is available
+                console.log('Got profile: ' + result);
+            });
+        }
+    }
+
+Listening to signals on a D-Bus object
+``````````````````````````````````````
+
+.. code::
+
+    import QtQuick 2.0
+    import org.nemomobile.dbus 2.0
+
+    Item {
+        DBusInterface {
+            id: profiled
+
+            service: 'com.nokia.profiled'
+            iface: 'com.nokia.profiled'
+            path: '/com/nokia/profiled'
+
+            signalsEnabled: true
+
+            function profile_changed(changed, active, profile, values) {
+                if (changed && active)
+                    console.log("Profile changed to:", profile)
+            }
+        }
+    }

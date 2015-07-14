@@ -9,6 +9,8 @@ Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5DBus)
+BuildRequires:  pkgconfig(Qt5Help)
+BuildRequires:  python-sphinx
 
 %description
 %{summary}.
@@ -26,6 +28,13 @@ BuildRequires:  pkgconfig(dbus-glib-1)
 %description tests
 %{summary}.
 
+%package doc
+Summary:    DBus plugin documentation
+Group:      System/Libraries
+
+%description doc
+%{summary}.
+
 %prep
 %setup -q -n %{name}-%{version}
 
@@ -33,11 +42,15 @@ BuildRequires:  pkgconfig(dbus-glib-1)
 %qmake5
 make %{?jobs:-j%jobs}
 make -C tests/dbustestd %{?jobs:-j%jobs}
+make -C docs %{?jobs:-j%jobs} qthelp
+qcollectiongenerator docs/_build/qthelp/NemoMobileD-BusQMLPlugin.qhcp
 
 %install
 rm -rf %{buildroot}
 %qmake5_install
 make -C tests/dbustestd install ROOT=%{buildroot} VERS=%{version}
+mkdir -p %{buildroot}/%{_datadir}/doc/%{name}
+cp -a docs/_build/qthelp/NemoMobileD-BusQMLPlugin.qch %{buildroot}/%{_datadir}/doc/%{name}
 
 %files
 %defattr(-,root,root,-)
@@ -51,4 +64,9 @@ make -C tests/dbustestd install ROOT=%{buildroot} VERS=%{version}
 %dir /opt/tests/nemo-qml-plugins-qt5/dbus
 %dir /usr/share/dbus-1/services
 /opt/tests/nemo-qml-plugins-qt5/dbus/*
-/usr/share/dbus-1/services/org.nemomobile.dbustestd.service
+%{_datadir}/dbus-1/services/org.nemomobile.dbustestd.service
+
+%files doc
+%defattr(-,root,root,-)
+%dir %{_datadir}/doc/%{name}
+%{_datadir}/doc/%{name}/NemoMobileD-BusQMLPlugin.qch

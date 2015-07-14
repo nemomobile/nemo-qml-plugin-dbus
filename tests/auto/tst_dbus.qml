@@ -139,6 +139,9 @@ Item {
             compare(dbusAdaptor.doubleValue, 5.2)
 
             compare(dbusInterface.getProperty("doubleValue"), 5.2)
+
+            dbusInterface.setProperty("doubleValue", 6.3)
+            tryCompare(dbusAdaptor, "doubleValue", 6.3)
         }
 
         function test_integerArg() {
@@ -147,6 +150,9 @@ Item {
             compare(dbusAdaptor.integerValue, 5)
 
             compare(dbusInterface.getProperty("integerValue"), 5)
+
+            dbusInterface.setProperty("integerValue", 6)
+            tryCompare(dbusAdaptor, "integerValue", 6)
         }
 
         function test_stringArg() {
@@ -155,6 +161,9 @@ Item {
             compare(dbusAdaptor.stringValue, "hello")
 
             compare(dbusInterface.getProperty("stringValue"), "hello")
+
+            dbusInterface.setProperty("stringValue", "goodbye")
+            tryCompare(dbusAdaptor, "stringValue", "goodbye")
         }
 
         function test_stringList() {
@@ -164,6 +173,9 @@ Item {
             compare(dbusAdaptor.variantValue, [ "one", "two", "three" ])
 
             compare(dbusInterface.getProperty("variantValue"), [ "one", "two", "three" ])
+
+            dbusInterface.setProperty("variantValue", [ "four", "five", "six" ])
+            tryCompare(dbusAdaptor, "variantValue", [ "four", "five", "six" ])
         }
 
         function test_multipleArgs() {
@@ -199,6 +211,9 @@ Item {
             tryCompare(dbusAdaptor, "lastFunction", "rcNoArgs")
 
             compare(dbusInterface.getProperty("StringValue"), "Capital")
+
+            dbusInterface.setProperty("StringValue", "CAPITAL")
+            tryCompare(dbusAdaptor, "rcStringValue", "CAPITAL")
         }
     }
 }

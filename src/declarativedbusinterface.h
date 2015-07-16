@@ -77,7 +77,7 @@ public:
             const QJSValue &errorCallback=QJSValue::UndefinedValue);
 
     Q_INVOKABLE QVariant getProperty(const QString &name);
-    Q_INVOKABLE void setProperty(const QString &name, const QVariant &value);
+    Q_INVOKABLE void setProperty(const QString &name, const QVariant &newValue);
 
     void classBegin();
     void componentComplete();

@@ -28,6 +28,3 @@ HEADERS += \
     declarativedbusadaptor10.h \
     declarativedbusinterface.h \
     declarativedbusinterface10.h
-
-MOC_DIR = $$PWD/.moc
-OBJECTS_DIR = $$PWD/.obj

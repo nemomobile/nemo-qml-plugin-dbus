@@ -5,6 +5,11 @@ The ``DBusAdaptor`` object can be used to provide a D-Bus service on the system 
 session bus. A service can be called from other applications on the system as long
 as the service is active.
 
+``DBusAdaptor`` is intended to provide a means of exposing simple objects over D-Bus.
+Property values and method arguments are automatically converted between QML/JS and
+D-Bus. There is limited control over this process. For more complex use cases it is
+recommended to use C++ and the Qt DBus module.
+
 Properties
 ^^^^^^^^^^
 

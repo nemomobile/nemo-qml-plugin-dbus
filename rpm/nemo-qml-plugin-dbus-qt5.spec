@@ -9,7 +9,6 @@ Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5DBus)
-BuildRequires:  pkgconfig(Qt5Help)
 BuildRequires:  python-sphinx
 
 %description
@@ -42,15 +41,15 @@ Group:      System/Libraries
 %qmake5
 make %{?jobs:-j%jobs}
 make -C tests/dbustestd %{?jobs:-j%jobs}
-make -C docs %{?jobs:-j%jobs} qthelp
-qcollectiongenerator docs/_build/qthelp/NemoMobileD-BusQMLPlugin.qhcp
+make -C docs %{?jobs:-j%jobs} html
 
 %install
 rm -rf %{buildroot}
 %qmake5_install
 make -C tests/dbustestd install ROOT=%{buildroot} VERS=%{version}
 mkdir -p %{buildroot}/%{_datadir}/doc/%{name}
-cp -a docs/_build/qthelp/NemoMobileD-BusQMLPlugin.qch %{buildroot}/%{_datadir}/doc/%{name}
+cp -a docs/_build/html %{buildroot}/%{_datadir}/doc/%{name}/html
+rm -f %{buildroot}/%{_datadir}/doc/%{name}/html/.buildinfo
 
 %files
 %defattr(-,root,root,-)
@@ -69,4 +68,4 @@ cp -a docs/_build/qthelp/NemoMobileD-BusQMLPlugin.qch %{buildroot}/%{_datadir}/d
 %files doc
 %defattr(-,root,root,-)
 %dir %{_datadir}/doc/%{name}
-%{_datadir}/doc/%{name}/NemoMobileD-BusQMLPlugin.qch
+%{_datadir}/doc/%{name}/html

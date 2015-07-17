@@ -557,11 +557,15 @@ QVariant DeclarativeDBusInterface::getProperty(const QString &name)
     return unwind(reply.arguments().first());
 }
 
-void DeclarativeDBusInterface::setProperty(const QString &name, const QVariant &value)
+void DeclarativeDBusInterface::setProperty(const QString &name, const QVariant &newValue)
 {
     QDBusMessage message = QDBusMessage::createMethodCall(m_service, m_path,
                                                           PropertyInterface,
                                                           QLatin1String("Set"));
+
+    QVariant value = newValue;
+    if (value.userType() == qMetaTypeId<QJSValue>())
+        value = value.value<QJSValue>().toVariant();
 
     QVariantList args;
     args.append(m_interface);

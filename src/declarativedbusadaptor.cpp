@@ -192,7 +192,10 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
                     continue;
 
                 QVariant value = property.read(this);
-                if (value.type() == QVariant::List) {
+                if (value.userType() == qMetaTypeId<QJSValue>())
+                    value = value.value<QJSValue>().toVariant();
+
+                if (value.userType() == QVariant::List) {
                     QVariantList variantList = value.toList();
                     if (variantList.count() > 0) {
 
@@ -215,7 +218,7 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
             interface = dbusArguments.value(0).toString();
 
             QDBusArgument map;
-            map.beginMap();
+            map.beginMap(qMetaTypeId<QString>(), qMetaTypeId<QDBusVariant>());
 
             for (int propertyIndex = meta->propertyOffset();
                         propertyIndex < meta->propertyCount();
@@ -226,12 +229,30 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
                 if (propertyName.startsWith(QLatin1String("rc")))
                     propertyName = propertyName.mid(2);
 
-                const QVariant value = property.read(this);
+                QVariant value = property.read(this);
+                if (value.userType() == qMetaTypeId<QJSValue>())
+                    value = value.value<QJSValue>().toVariant();
 
-                map.beginMapEntry();
-                map << propertyName;
-                map << value;
-                map.endMapEntry();
+                if (value.userType() == QVariant::List) {
+                    QVariantList variantList = value.toList();
+                    if (variantList.count() > 0) {
+
+                        QDBusArgument list;
+                        list.beginArray(variantList.first().userType());
+                        foreach (const QVariant &listValue, variantList) {
+                            list << listValue;
+                        }
+                        list.endArray();
+                        value = QVariant::fromValue(list);
+                    }
+                }
+
+                if (value.isValid()) {
+                    map.beginMapEntry();
+                    map << propertyName;
+                    map << QDBusVariant(value);
+                    map.endMapEntry();
+                }
             }
             map.endMap();
 

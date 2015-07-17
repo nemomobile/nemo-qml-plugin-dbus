@@ -39,7 +39,6 @@ import org.nemomobile.dbus 2.0
 Item {
     width: 500; height: 500
 
-
     DBusAdaptor {
         id: dbusAdaptor
 
@@ -121,8 +120,20 @@ Item {
         path: "/org/nemomobile/dbus/test"
     }
 
+    DBusInterface {
+        id: dbusProperties
+
+        service: dbusInterface.service
+        iface: "org.freedesktop.DBus.Properties"
+        path: dbusInterface.path
+    }
+
     resources: TestCase {
+        id: testCase
+
         name: "DBus"
+
+        property bool properties_getAll_done: false
 
         function test_cleanup() {
             dbusAdaptor.reset()
@@ -214,6 +225,24 @@ Item {
 
             dbusInterface.setProperty("StringValue", "CAPITAL")
             tryCompare(dbusAdaptor, "rcStringValue", "CAPITAL")
+        }
+
+        function test_properties_getAll() {
+            dbusProperties.typedCall("GetAll", {'type': 's', 'value': dbusInterface.iface},
+                                     function(result) {
+                verify(true)
+                for (var p in result) {
+                    if (p[0] === p[0].toUpperCase())
+                        compare(result[p], dbusAdaptor["rc" + p])
+                    else
+                        compare(result[p], dbusAdaptor[p])
+                    testCase.properties_getAll_done = true
+                }
+            }, function() {
+                verify(false)
+                testCase.properties_getAll_done = true
+            })
+            tryCompare(testCase, "properties_getAll_done", true)
         }
     }
 }

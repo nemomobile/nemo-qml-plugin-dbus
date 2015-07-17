@@ -5,6 +5,11 @@ The ``DBusInterface`` object can be used to call methods of objects on the syste
 session bus, as well as receive signals (see :cpp:member:`signalsEnabled`) and read
 properties of those objects.
 
+``DBusInterface`` is intended to provide access to simple objects exposed over D-Bus.
+Property values and method arguments are automatically converted between QML/JS and
+D-Bus. There is limited control over this process. For more complex use cases it is
+recommended to use C++ and the Qt DBus module.
+
 Properties
 ^^^^^^^^^^
 

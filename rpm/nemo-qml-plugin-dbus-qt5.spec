@@ -9,7 +9,7 @@ Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5DBus)
-BuildRequires:  python-sphinx
+BuildRequires:  mer-qdoc-template
 
 %description
 %{summary}.
@@ -41,20 +41,17 @@ Group:      System/Libraries
 %qmake5
 make %{?jobs:-j%jobs}
 make -C tests/dbustestd %{?jobs:-j%jobs}
-make -C docs %{?jobs:-j%jobs} html
+make %{?jobs:-j%jobs} docs
 
 %install
 rm -rf %{buildroot}
 %qmake5_install
 make -C tests/dbustestd install ROOT=%{buildroot} VERS=%{version}
-mkdir -p %{buildroot}/%{_datadir}/doc/%{name}
-cp -a docs/_build/html %{buildroot}/%{_datadir}/doc/%{name}/html
-rm -f %{buildroot}/%{_datadir}/doc/%{name}/html/.buildinfo
+make install_docs INSTALL_ROOT=%{buildroot}
 
 %files
 %defattr(-,root,root,-)
 %dir %{_libdir}/qt5/qml/org/nemomobile/dbus
-%dir %{_libdir}/qt5/qml/org/nemomobile/dbus/qmldir
 %{_libdir}/qt5/qml/org/nemomobile/dbus/libnemodbus.so
 %{_libdir}/qt5/qml/org/nemomobile/dbus/qmldir
 
@@ -67,5 +64,5 @@ rm -f %{buildroot}/%{_datadir}/doc/%{name}/html/.buildinfo
 
 %files doc
 %defattr(-,root,root,-)
-%dir %{_datadir}/doc/%{name}
-%{_datadir}/doc/%{name}/html
+%dir %{_datadir}/doc/nemo-qml-plugin-dbus
+%{_datadir}/doc/nemo-qml-plugin-dbus/nemo-qml-plugin-dbus.qch

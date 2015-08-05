@@ -1,13 +1,14 @@
-Examples
-========
+/*!
+\title Examples
+\page examples.html examples
 
-Calling a function on a session bus object
-``````````````````````````````````````````
+There are a number of examples which demonstrate how to use various aspects of the API.
+
+\section2 Calling a function on a session bus object
 
 This code snippet talks to the profile daemon and sets the current profile to silent:
 
-.. code::
-
+\code
     import QtQuick 2.0
     import org.nemomobile.dbus 2.0
 
@@ -25,15 +26,14 @@ This code snippet talks to the profile daemon and sets the current profile to si
             profiled.call('set_profile', ['silent']);
         }
     }
+\endcode
 
-Calling a function and getting its return value
-```````````````````````````````````````````````
+\section2 Calling a function and getting its return value
 
 Because function calls are asynchronous, we need to provide a callback
 to be called when the function result is available:
 
-.. code::
-
+\code
     import QtQuick 2.0
     import org.nemomobile.dbus 2.0
 
@@ -55,12 +55,11 @@ to be called when the function result is available:
             });
         }
     }
+\endcode
 
-Listening to signals on a D-Bus object
-``````````````````````````````````````
+\section2 Listening to signals on a D-Bus object
 
-.. code::
-
+\code
     import QtQuick 2.0
     import org.nemomobile.dbus 2.0
 
@@ -80,3 +79,5 @@ Listening to signals on a D-Bus object
             }
         }
     }
+\endcode
+*/

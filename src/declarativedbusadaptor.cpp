@@ -34,6 +34,57 @@
 
 #include "declarativedbusinterface.h"
 
+/*!
+    \qmltype DBusAdaptor
+    \inqmlmodule org.nemomobile.dbus
+    \brief Provides a service on D-Bus
+
+    The DBusAdaptor object can be used to provide a D-Bus service on the system or session bus. A
+    service can be called from other applications on the system as long as the service is active.
+
+    DBusAdaptor is intended to provide a means of exposing simple objects over D-Bus. Property
+    values and method arguments are automatically converted between QML/JS and D-Bus. There is
+    limited control over this process. For more complex use cases it is recommended to use C++ and
+    the Qt DBus module.
+
+    \section2 Exposing an object on D-Bus
+
+    The following code demonstrates how to expose an object on the session bus. The
+    \c {com.example.service} service name will be registered and an object at
+    \c {/com/example/service} will be registered supporting the \c {com.example.service} interface
+    in addition to the common interfaces \c {org.freedesktop.DBus.Properties},
+    \c {org.freedesktop.DBus.Introspectable} and \c {org.freedesktop.DBus.Peer}.
+
+    All properties and methods of the DBusAdaptor will be accessible via D-Bus. Only those
+    properties and methods declared in the \l xml will be discoverable via D-Bus introspection.
+
+    \code
+    import QtQuick 2.0
+    import org.nemomobile.dbus 2.0
+
+    Item {
+        DBusAdaptor {
+            id: dbus
+
+            property bool needUpdate: true
+
+            service: 'com.example.service'
+            iface: 'com.example.service'
+            path: '/com/example/service'
+
+            xml: '  <interface name="com.example.service">\n' +
+                 '    <method name="update" />\n' +
+                 '    <property name="needUpdate" type="b" access="readwrite" />\n' +
+                 '  </interface>\n'
+
+            function update() {
+                console.log("Update called")
+            }
+        }
+    }
+    \endcode
+*/
+
 DeclarativeDBusAdaptor::DeclarativeDBusAdaptor(QObject *parent)
     : QDBusVirtualObject(parent), m_bus(DeclarativeDBus::SessionBus)
 {
@@ -43,6 +94,11 @@ DeclarativeDBusAdaptor::~DeclarativeDBusAdaptor()
 {
 }
 
+/*!
+    \qmlproperty string DBusAdaptor::service
+
+    This property holds the registered service name. Typically this is in reversed domain-name.
+*/
 QString DeclarativeDBusAdaptor::service() const
 {
     return m_service;
@@ -56,6 +112,11 @@ void DeclarativeDBusAdaptor::setService(const QString &service)
     }
 }
 
+/*!
+    \qmlproperty string DBusAdaptor::path
+
+    This property holds the object path that this object will be published at.
+*/
 QString DeclarativeDBusAdaptor::path() const
 {
     return m_path;
@@ -69,6 +130,11 @@ void DeclarativeDBusAdaptor::setPath(const QString &path)
     }
 }
 
+/*!
+    \qmlproperty string DBusAdaptor::iface
+
+    This property holds the interface that this object supports.
+*/
 QString DeclarativeDBusAdaptor::interface() const
 {
     return m_interface;
@@ -83,11 +149,16 @@ void DeclarativeDBusAdaptor::setInterface(const QString &interface)
 }
 
 /*
-    The XML service description.  This could be derived from the meta-object but since its unlikely
+    The XML service description. This could be derived from the meta-object but since it's unlikely
     to be needed most of the time this and type conversion is non-trivial it's not, and there is
     this property instead if it is needed.
 */
 
+/*!
+    \qmlproperty string DBusAdaptor::xml
+
+    This property holds the D-Bus introspection metadata snippet for this object/interface.
+*/
 QString DeclarativeDBusAdaptor::xml() const
 {
     return m_xml;
@@ -101,6 +172,16 @@ void DeclarativeDBusAdaptor::setXml(const QString &xml)
     }
 }
 
+/*!
+    \qmlproperty enum DBusAdaptor::bus
+
+    This property holds whether to use the session or system D-Bus.
+
+    \list
+        \li DBus.SessionBus - The D-Bus session bus
+        \li DBus.SystemBus - The D-Bus system bus
+    \endlist
+*/
 DeclarativeDBus::BusType DeclarativeDBusAdaptor::bus() const
 {
     return m_bus;
@@ -382,6 +463,12 @@ bool DeclarativeDBusAdaptor::handleMessage(const QDBusMessage &message, const QD
     return false;
 }
 
+/*!
+    \qmlmethod void DBusAdaptor::emitSignal(string name, variant arguments)
+
+    Emit a signal with the given \a name and \a arguments. If \a arguments is undefined (the
+    default if not specified), then the signal will be emitted without arguments.
+*/
 void DeclarativeDBusAdaptor::emitSignal(const QString &name, const QJSValue &arguments)
 {
     QDBusMessage signal = QDBusMessage::createSignal(m_path, m_interface, name);

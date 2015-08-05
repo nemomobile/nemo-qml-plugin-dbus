@@ -41,6 +41,99 @@
 #include <QUrl>
 #include <QXmlStreamReader>
 
+/*!
+    \qmltype DBusInterface
+    \inqmlmodule org.nemomobile.dbus
+    \brief Provides access to a service on D-Bus
+
+    The DBusInterface object can be used to call methods of objects on the system and session bus,
+    as well as receive signals (see \l signalsEnabled) and read properties of those objects.
+
+    DBusInterface is intended to provide access to simple objects exposed over D-Bus. Property
+    values and method arguments are automatically converted between QML/JS and D-Bus. There is
+    limited control over this process. For more complex use cases it is recommended to use C++ and
+    the Qt DBus module.
+
+    \section2 Handling D-Bus Signals
+
+    If \l signalsEnabled is set to \c true, signals of the destination object will be connected to
+    functions on the object that have the same name.
+
+    Imagine a D-Bus object in service \c {org.example.service} at path \c {/org/example/service} and
+    interface \c {org.example.intf} with two signals, \c {UpdateAll} and \c {UpdateOne}. You can
+    handle these signals this way:
+
+    \code
+    DBusInterface {
+        service: 'org.example.service'
+        path: '/org/example/service'
+        iface: 'org.example.intf'
+
+        signalsEnabled: true
+
+        function updateAll() {
+            // Will be called when the "UpdateAll" signal is received
+        }
+
+        function updateOne(a, b) {
+            // Will be called when the "UpdateOne" signal is received
+        }
+    }
+    \endcode
+
+    \note In D-Bus, signal names usually start with an uppercase letter, but in QML, function names
+          on objects must start with lowercase letters. The plugin connects uppercase signal names
+          to functions where the first letter is lowercase (the D-Bus signal \c {UpdateOne} is
+          handled by the QML/JavaScript function \c {updateOne}).
+
+    \section2 Calling D-Bus Methods
+
+    Remote D-Bus methods can be called using either \l call() or \l typedCall(). \l call() provides
+    a simplier calling API, only supporting basic data types and discards any value return by the
+    method. \l typedCall() supports more data types and has callbacks for call completion and error.
+
+    Imagine a D-Bus object in service \c {org.example.service} at path \c {/org/example/service} and
+    interface \c {org.example.intf} with two methods:
+
+    \list
+        \li \c RegisterObject with a single \e {object path} parameter and returning a \c bool
+        \li \c Update with no parameters
+    \endlist
+
+    You can call these two methods this way:
+
+    \code
+    DBusInterface {
+        service: 'org.example.service'
+        path: '/org/example/service'
+        iface: 'org.example.intf'
+
+        // Local function to call remote method RegisterObject
+        function registerObject(object) {
+            typedCall('RegisterObject',
+                      { 'type': 'o', 'value': '/example/object/path' },
+                      function(result) { console.log('call completed with:', result) },
+                      function() { console.log('call failed') })
+        }
+
+        // Location function to call remote method Update
+        function update() {
+            call('Update', undefined)
+        }
+    }
+    \endcode
+*/
+
+/*!
+    \qmlsignal DBusInterface::propertiesChanged()
+
+    This signal is emitted when properties of the D-Bus object have changed (only if the D-Bus
+    object does emit signals when properties change). Right now, this does not tell which properties
+    have changed and to which values.
+
+    \since version 2.0.8
+*/
+
 namespace {
 const QLatin1String PropertyInterface("org.freedesktop.DBus.Properties");
 }
@@ -56,6 +149,11 @@ DeclarativeDBusInterface::~DeclarativeDBusInterface()
         delete watcher;
 }
 
+/*!
+    \qmlproperty string DBusInterface::service
+
+    This property holds the service name of the service to connect to.
+*/
 QString DeclarativeDBusInterface::service() const
 {
     return m_service;
@@ -73,6 +171,11 @@ void DeclarativeDBusInterface::setService(const QString &service)
     }
 }
 
+/*!
+    \qmlproperty string DBusInterface::path
+
+    This property holds the object path of the object to access.
+*/
 QString DeclarativeDBusInterface::path() const
 {
     return m_path;
@@ -90,6 +193,11 @@ void DeclarativeDBusInterface::setPath(const QString &path)
     }
 }
 
+/*!
+    \qmlproperty string DBusInterface::iface
+
+    This property holds the interface.
+*/
 QString DeclarativeDBusInterface::interface() const
 {
     return m_interface;
@@ -107,6 +215,16 @@ void DeclarativeDBusInterface::setInterface(const QString &interface)
     }
 }
 
+/*!
+    \qmlproperty enum DBusInterface::bus
+
+    This property holds whether to use the session or system D-Bus.
+
+    \list
+        \li DBus.SessionBus - The D-Bus session bus
+        \li DBus.SystemBus - The D-Bus system bus
+    \endlist
+*/
 DeclarativeDBus::BusType DeclarativeDBusInterface::bus() const
 {
     return m_bus;
@@ -124,6 +242,12 @@ void DeclarativeDBusInterface::setBus(DeclarativeDBus::BusType bus)
     }
 }
 
+/*!
+    \qmlproperty bool DBusInterface::signalsEnabled
+
+    This property holds whether this object listens signal emissions on the remote D-Bus object. See
+    \l {Handling D-Bus Signals}.
+*/
 bool DeclarativeDBusInterface::signalsEnabled() const
 {
     return m_signalsEnabled;
@@ -162,6 +286,17 @@ QVariantList DeclarativeDBusInterface::argumentsFromScriptValue(const QJSValue &
     return dbusArguments;
 }
 
+/*!
+    \qmlmethod void DBusInterface::call(string method, variant arguments)
+
+    Call a D-Bus method with the name \a method on the object with \a arguments as either a single
+    value or an array. For a function with no arguments, pass in \c undefined.
+
+    \note This function supports passing basic data types and will fail if the signature of the
+          remote method does not match the signature determined from the type of \a arguments. The
+          \l typedCall() function can be used to explicity specify the type of each element of
+          \a arguments.
+*/
 void DeclarativeDBusInterface::call(const QString &method, const QJSValue &arguments)
 {
     QVariantList dbusArguments = argumentsFromScriptValue(arguments);
@@ -495,6 +630,27 @@ QVariant DeclarativeDBusInterface::parse(const QDBusArgument &argument)
     }
 }
 
+/*!
+    \qmlmethod bool DBusInterface::typedCall(string method, variant arguments, variant callback, variant errorCallback)
+
+    Call a D-Bus method with the name \a method on the object with \a arguments. Each parameter is
+    described by an object:
+
+    \code
+    {
+        'type': 'o'
+        'value': '/org/example'
+    }
+    \endcode
+
+    Where \c type is the D-Bus type that \c value should be marshalled as. \a arguments can be
+    either a single object describing the parameter or an array of objects.
+
+    When the function returns, call \a callback with a single argument that is the return value. The
+    \a callback argument is optional, if set to \c undefined (the default), the return value will be
+    discarded. If the function fails \a errorCallback is called if it is not set to \c undefined
+    (the default).
+*/
 bool DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &arguments, const QJSValue &callback,
                                          const QJSValue &errorCallback)
 {
@@ -533,6 +689,11 @@ bool DeclarativeDBusInterface::typedCall(const QString &method, const QJSValue &
     return true;
 }
 
+/*!
+    \qmlproperty variant DBusInteface::getProperty(string name)
+
+    Returns the the D-Bus property named \a name from the object.
+*/
 QVariant DeclarativeDBusInterface::getProperty(const QString &name)
 {
     QDBusMessage message =
@@ -557,6 +718,13 @@ QVariant DeclarativeDBusInterface::getProperty(const QString &name)
     return unwind(reply.arguments().first());
 }
 
+/*!
+    \qmlmethod void DBusInterface::setProperty(string name, variant value)
+
+    Sets the D-Bus property named \a name on the object to \a value.
+
+    \since version 2.0.0
+*/
 void DeclarativeDBusInterface::setProperty(const QString &name, const QVariant &newValue)
 {
     QDBusMessage message = QDBusMessage::createMethodCall(m_service, m_path,

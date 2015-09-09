@@ -329,7 +329,7 @@ static QStringList toQStringList(const QVariantList &lst) {
         arr << qvariant_cast<QString>(var);
     }
     return arr;
-};
+}
 
 static QByteArray toQByteArray(const QVariantList &lst) {
     QByteArray arr;
@@ -338,7 +338,7 @@ static QByteArray toQByteArray(const QVariantList &lst) {
         arr.append(static_cast<char>(tmp));
     }
     return arr;
-};
+}
 
 static void registerDBusTypes(void)
 {
@@ -1058,7 +1058,7 @@ void DeclarativeDBusInterface::disconnectSignalHandler()
 
 void DeclarativeDBusInterface::connectSignalHandler()
 {
-    if (!m_componentCompleted || !m_signalsEnabled)
+    if (!m_componentCompleted || !m_signalsEnabled || m_service.isEmpty() || m_path.isEmpty())
         return;
 
     QDBusMessage message =

@@ -889,14 +889,16 @@ void DeclarativeDBusInterface::pendingCallFinished(QDBusPendingCallWatcher *watc
     QDBusPendingReply<> reply = *watcher;
 
     if (reply.isError()) {
-        qmlInfo(this) << reply.error();
         QJSValue errorCallback = callbacks.second;
         if (errorCallback.isCallable()) {
             QJSValue result = errorCallback.call();
             if (result.isError()) {
                 qmlInfo(this) << "Error executing error handling callback";
             }
+        } else {
+            qmlInfo(this) << reply.error();
         }
+
         return;
     }
 

@@ -54,6 +54,7 @@ make install_docs INSTALL_ROOT=%{buildroot}
 %dir %{_libdir}/qt5/qml/org/nemomobile/dbus
 %{_libdir}/qt5/qml/org/nemomobile/dbus/libnemodbus.so
 %{_libdir}/qt5/qml/org/nemomobile/dbus/qmldir
+%{_libdir}/qt5/qml/org/nemomobile/dbus/plugins.qmltypes
 
 %files tests
 %defattr(-,root,root,-)
